@@ -55,7 +55,6 @@ class MidnightCLI(BaseMiner):
             '-n', '--num',
             type=int,
             default=0,
-            required=True,
             help="使用するスレッド数"
             )
         mine_parser.set_defaults(func=self.handle_mine)
@@ -104,24 +103,32 @@ class MidnightCLI(BaseMiner):
         # endfor
 
         time_start = time.time()
+        set__sec_fetch_a_new_challenge = set()
+        set__sec_addresses_and_works = set()
         while True:
             sec = int(time.time() - time_start)
 
-            if sec % 30 == 0:
+            if sec % 30 == 0 and sec not in set__sec_fetch_a_new_challenge:
                 self.fetch_a_new_challenge()
+                set__sec_fetch_a_new_challenge.add(sec)
             # endif
 
-            if sec % (60 * 10) == 0:
+            if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
                 print('=== Addresses / Open works ===')
                 for idx_addr, address in enumerate(list__address):
                     list__challenge = self.tracker.get_open_challenges(address)
 
                     print(f'[{self.addrbook[address]}] {address}')
-                    for challenge in list__challenge:
-                        print(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
-                    # endfor
+                    if len(list__challenge) > 0:
+                        for challenge in list__challenge:
+                            print(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
+                        # endfor
+                    else:
+                        print(f'- None')
+                    # endif
                 # endfor
                 print()
+                set__sec_addresses_and_works.add(sec)
             # endif
         # endwhile
     # enddef
@@ -207,6 +214,7 @@ class MidnightCLI(BaseMiner):
               ...
             }
         """
+
         return self._get('challenge')
     # enddef
 
@@ -217,6 +225,7 @@ class MidnightCLI(BaseMiner):
         Body is {}.
         """
         path = f'/solution/{address}/{challenge.challenge_id}/{solution.nonce_hex}'
+
         return self._post(path, {})
     # enddef
 
