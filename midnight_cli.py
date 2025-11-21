@@ -2,8 +2,10 @@ import argparse
 import threading
 import time
 
+from requests import ReadTimeout
+
 from ashmaize_miner import AshMaizeMiner
-from base_miner import BaseMiner, MinerError
+from base_miner import BaseMiner
 from challenge import Challenge
 from project import Project
 from solution import Solution
@@ -219,7 +221,12 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def fetch_a_new_challenge(self) -> None:
-        challenge_resp = self._get_challenge()
+        try:
+            challenge_resp = self._get_challenge()
+        except ReadTimeout as e:
+            return
+        # endtry
+
         if self.project == Project.Defensio:
             code = 'active'
         else:
@@ -254,7 +261,7 @@ class MidnightCLI(BaseMiner):
         # endif
     # enddef
 
-    def mine_challenge(self, address: str, challenge: Challenge):
+    def mine_challenge(self, address: str, challenge: Challenge) -> None:
         if not self.tracker.work_exists(address=address, challenge=challenge):
             self.tracker.add_work(address=address, challenge=challenge)
         # endif
@@ -274,21 +281,21 @@ class MidnightCLI(BaseMiner):
 
         try:
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
-            print('=== Solution Submission Response ===')
-            print(resp)
-
-            if 'crypto_receipt' in resp.keys():
-                self.tracker.update_work(address=address, challenge=challenge, status=Status.Solved)
-                print(f'-> Solved !!!')
-            else:
-                code = resp.get('statusCode')
-                message = resp.get('message')
-                self.tracker.update_work(address=address, challenge=challenge, status=Status.Invalid)
-                print(f'-> Solution Invalid. code={code}, message={message}')
-            # endif
-        except MinerError as e:
-            print(f'-> Submitting solution failed: {e}')
+        except ReadTimeout as e:
+            return
         # endtry
+        print('=== Solution Submission Response ===')
+        print(resp)
+
+        if 'crypto_receipt' in resp.keys():
+            self.tracker.update_work(address=address, challenge=challenge, status=Status.Solved)
+            print(f'-> Solved !!!')
+        else:
+            code = resp.get('statusCode')
+            message = resp.get('message')
+            self.tracker.update_work(address=address, challenge=challenge, status=Status.Invalid)
+            print(f'-> Solution Invalid. code={code}, message={message}')
+        # endif
         print()
     # enddef
 
