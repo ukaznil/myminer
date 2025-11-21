@@ -68,9 +68,11 @@ class AshMaizeMiner:
             sec = int(time.time() - time_start)
             if ((sec - 1) % (60 * 5) == 0 and last_display != sec) or (tries % 100_000 == 0):
                 hashrate = tries / (sec + 1e-9)
-                print(f'=== [{addr_short}/{challenge.challenge_id}] Stats ===')
-                print(f'Hashrate={hashrate:,.0f} H/s, tries={tries:,}')
-                print()
+                print((
+                    f'=== [{addr_short}/{challenge.challenge_id}] Stats ==='
+                    f'Hashrate={hashrate:,.0f} H/s, tries={tries:,}'
+                    ''
+                ))
 
                 last_display = sec
             # endif

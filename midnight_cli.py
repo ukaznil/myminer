@@ -114,20 +114,23 @@ class MidnightCLI(BaseMiner):
             # endif
 
             if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
-                print('=== Addresses / Open works ===')
+                msg = []
+                msg.append('=== Addresses / Open works ===')
                 for idx_addr, address in enumerate(list__address):
                     list__challenge = self.tracker.get_open_challenges(address)
 
-                    print(f'[{self.addrbook[address]}] {address}')
+                    msg.append(f'[{self.addrbook[address]}] {address}')
                     if len(list__challenge) > 0:
                         for challenge in list__challenge:
-                            print(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
+                            msg.append(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
                         # endfor
                     else:
-                        print(f'- None')
+                        msg.append(f'- None')
                     # endif
                 # endfor
-                print()
+                msg.append('')
+                print('\n'.join(msg))
+
                 set__sec_addresses_and_works.add(sec)
             # endif
         # endwhile
@@ -172,20 +175,24 @@ class MidnightCLI(BaseMiner):
     def register(self, address: str):
         # tandc
         data = self._get_tandc()
-        print(f'== Terms and Conditions ===')
-        print(f'Version: {data.get("version")}')
-        print(data.get('content', ''))
-        print()
-        print(f'=== Message to sign (wallet CIP-30)')
-        print(data.get('message', ''))
+        print((
+            f'== Terms and Conditions ==='
+            f'Version: {data.get("version")}'
+            f'{data.get("content", "")}'
+            ''
+            f'=== Message to sign (wallet CIP-30)'
+            f'{data.get("message", "")}'
+        ))
 
         # register
         signature = input('Signature: ')
         pubkey = input('Public Key: ')
         resp = self._register_address(address=address, signature=signature, pubkey=pubkey)
-        print(f'=== Registration response ===')
-        print(resp)
-        print()
+        print((
+            f'=== Registration response ==='
+            f'{resp}'
+            ''
+        ))
 
         # save
         if 'registrationReceipt' in resp.keys():
@@ -261,9 +268,11 @@ class MidnightCLI(BaseMiner):
 
             # save
             if self.tracker.add_challenge(challenge):
-                print('=== New Challenge ===')
-                print(challenge)
-                print()
+                print((
+                    '=== New Challenge ==='
+                    f'{challenge}'
+                    ''
+                ))
             else:
                 pass
             # endif
@@ -281,11 +290,13 @@ class MidnightCLI(BaseMiner):
         finally:
             self.tracker.update_work(address=address, challenge=challenge, status=Status.Open)
         # endtry
-        print(f'=== Solution Found ===')
-        print(f'address: [{self.addrbook[address]}] {address}')
-        print(f'challenge: {challenge.challenge_id}')
-        print(solution)
-        print()
+        print((
+            f'=== Solution Found ==='
+            f'address: [{self.addrbook[address]}] {address}'
+            f'challenge: {challenge.challenge_id}'
+            f'{solution}'
+            ''
+        ))
         self.tracker.add_solution(address=address, challenge=challenge, solution=solution)
 
         try:
@@ -293,8 +304,10 @@ class MidnightCLI(BaseMiner):
         except ReadTimeout as e:
             return
         # endtry
-        print('=== Solution Submission Response ===')
-        print(resp)
+        print((
+            '=== Solution Submission Response ==='
+            f'{resp}'
+        ))
 
         if 'crypto_receipt' in resp.keys():
             self.tracker.update_work(address=address, challenge=challenge, status=Status.Solved)
@@ -315,10 +328,12 @@ class MidnightCLI(BaseMiner):
             if challenge is None:
                 time.sleep(60)
             else:
-                print('=== Start This Challenge ===')
-                print(f'address: [{self.addrbook[address]}] {address}')
-                print(f'chalenge:\n{challenge}')
-                print()
+                print((
+                    '=== Start This Challenge ==='
+                    f'address: [{self.addrbook[address]}] {address}'
+                    f'chalenge:\n{challenge}'
+                    ''
+                ))
 
                 self.mine_challenge(address=address, challenge=challenge)
                 time.sleep(1)
