@@ -532,6 +532,14 @@ class MidnightCLI(BaseMiner):
         try:
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
         except Exception as e:
+            print_with_time('\n'.join([
+                f'=== Solution Submission Error ===',
+                f'address: [{self.addrbook[address]}] {address}',
+                f'challenge: {challenge.challenge_id}',
+                f'solution: {solution}',
+                f'error: {e}'
+                ]))
+
             return
         # endtry
         msg = [
