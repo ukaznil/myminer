@@ -2,8 +2,6 @@ import argparse
 import threading
 import time
 
-from requests import ReadTimeout
-
 from ashmaize_miner import AshMaizeMiner
 from base_miner import BaseMiner
 from challenge import Challenge
@@ -239,7 +237,7 @@ class MidnightCLI(BaseMiner):
     def fetch_a_new_challenge(self) -> None:
         try:
             challenge_resp = self._get_challenge()
-        except ReadTimeout as e:
+        except Exception as e:
             return
         # endtry
 
@@ -301,7 +299,7 @@ class MidnightCLI(BaseMiner):
 
         try:
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
-        except ReadTimeout as e:
+        except Exception as e:
             return
         # endtry
         print('\n'.join([
