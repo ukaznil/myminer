@@ -273,6 +273,12 @@ class Tracker:
                 (SolutionModel.status == SolutionStatus.Found.value)
                 )
         )
-        solutoin = query.first()
+        sm = query.first()  # type: SolutionModel
+        if sm:
+            solution = Solution(nonce_hex=sm.nonce_hex, hash_hex=sm.hash_hex, tries=sm.tries)
 
-        return solutoin
+            return solution
+        else:
+            return None
+        # endif
+    # enddef
