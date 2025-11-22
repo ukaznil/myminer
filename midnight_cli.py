@@ -115,13 +115,12 @@ class MidnightCLI(BaseMiner):
         # enddef
 
         def show_hashrate():
-            msg = []
+            msg = [f'=== [H]ashrate ===']
             for address in list__address:
                 addr_short = self.addrbook[address]
                 hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
                 tries = safefstr(self.miner.get_tries(address), ',')
 
-                msg.append(f'=== [H]ashrate ===')
                 msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}')
             # endfor
 
