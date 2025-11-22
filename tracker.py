@@ -222,6 +222,20 @@ class Tracker:
         # endif
     # enddef
 
+    def get_num_work(self, address: str, status: WorkStatus) -> int:
+        num = (
+            WorkModel
+            .select()
+            .where(
+                (WorkModel.address == address) &
+                (WorkModel.status == status.value)
+                )
+            .count()
+        )
+
+        return num
+    # enddef
+
     # -------------------------
     # solution
     # -------------------------

@@ -113,11 +113,17 @@ class MidnightCLI(BaseMiner):
 
             if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
                 msg = []
-                msg.append('=== Addresses / Open works ===')
+                msg.append('=== Addresses / Work Status ===')
                 for idx_addr, address in enumerate(list__address):
-                    list__challenge = self.tracker.get_open_challenges(address)
-
                     msg.append(f'[{self.addrbook[address]}] {address}')
+                    num_open = self.tracker.get_num_work(address=address, status=WorkStatus.Open)
+                    num_working = self.tracker.get_num_work(address=address, status=WorkStatus.Working)
+                    num_solved = self.tracker.get_num_work(address=address, status=WorkStatus.Solved)
+                    num_invalid = self.tracker.get_num_work(address=address, status=WorkStatus.Invalid)
+                    msg.append(f'open={num_open}, working={num_working}, solved={num_solved}, invalid={num_invalid}')
+
+                    msg.append(f'todo:')
+                    list__challenge = self.tracker.get_open_challenges(address)
                     if len(list__challenge) > 0:
                         for challenge in list__challenge:
                             msg.append(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
