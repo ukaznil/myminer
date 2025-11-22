@@ -118,7 +118,7 @@ class MidnightCLI(BaseMiner):
     def handle_mine(self, args: argparse.Namespace):
         list__address = self.make_addressbook(args.num)
 
-        def show_results():
+        def __show_results():
             msg = []
             msg.append('=== [R]esults ===')
             for idx_addr, address in enumerate(list__address):
@@ -142,20 +142,35 @@ class MidnightCLI(BaseMiner):
             print_with_time('\n'.join(msg))
         # enddef
 
-        def show_hashrate():
+        def show_results():
+            threading.Thread(
+                target=__show_results,
+                daemon=True,
+                ).start()
+        # enddef
+
+        def __show_hashrate():
             msg = [f'=== [H]ashrate ===']
             for address in list__address:
                 addr_short = self.addrbook[address]
                 hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
                 tries = safefstr(self.miner.get_tries(address), ',')
+                challenge = self.miner.get_challenge(address)
 
-                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}')
+                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={challenge}')
             # endfor
 
             print_with_time('\n'.join(msg))
         # enddef
 
-        def show_statistics():
+        def show_hashrate():
+            threading.Thread(
+                target=__show_hashrate,
+                daemon=True,
+                ).start()
+        # enddef
+
+        def __show_statistics():
             msg = [f'=== [S]tatistics ===']
             for address in list__address:
                 try:
@@ -176,6 +191,13 @@ class MidnightCLI(BaseMiner):
             print_with_time('\n'.join(msg))
         # enddef
 
+        def show_statistics():
+            threading.Thread(
+                target=__show_statistics,
+                daemon=True,
+                ).start()
+        # enddef
+
         # Thread開始
         threads = []  # type: list[threading.Thread]
         def input_loop():
@@ -192,6 +214,8 @@ class MidnightCLI(BaseMiner):
                     print_with_time('=== Stopping miner... ===')
                     self.miner.stop()
                     break
+                else:
+                    print(f'Invalid command: {cmd}. Available: ([r]esults, [h]ashrate, [s]tatistics, [q]uit)')
                 # endif
             # endfor
         # enddef
@@ -211,23 +235,34 @@ class MidnightCLI(BaseMiner):
             thread.start()
         # endfor
 
-        time_start = time.time()
-        set__sec_fetch_a_new_challenge = set()
-        set__sec_addresses_and_works = set()
+        last_fetch_a_new_challenge = 0
+        last_show_info = 0
+        last_maintain_cache = 0
         while self.miner.is_running():
-            sec = int(time.time() - time_start)
+            now = time.time()
 
-            if sec % 30 == 0 and sec not in set__sec_fetch_a_new_challenge:
+            if now - last_fetch_a_new_challenge > 60 * 1:
                 self.fetch_a_new_challenge()
-                set__sec_fetch_a_new_challenge.add(sec)
+
+                last_fetch_a_new_challenge = now
             # endif
 
-            if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
+            if now - last_show_info > 60 * 10:
                 show_results()
                 show_hashrate()
                 show_statistics()
 
-                set__sec_addresses_and_works.add(sec)
+                last_show_info = now
+            # endif
+
+            if now - last_maintain_cache > 60 * 60:
+                list__challenge = []
+                for address in list__address:
+                    list__challenge += self.tracker.get_open_challenges(address)
+                # endfor
+                self.miner.maintain_cache(list__challenge)
+
+                last_maintain_cache = now
             # endif
         # endwhile
 
@@ -410,7 +445,7 @@ class MidnightCLI(BaseMiner):
         return self._post(path, {})
     # enddef
 
-    def fetch_a_new_challenge(self) -> None:
+    def __fetch_a_new_challenge(self) -> None:
         try:
             challenge_resp = self._get_challenge()
         except Exception as e:
@@ -450,6 +485,13 @@ class MidnightCLI(BaseMiner):
                 pass
             # endif
         # endif
+    # enddef
+
+    def fetch_a_new_challenge(self) -> None:
+        threading.Thread(
+            target=self.__fetch_a_new_challenge,
+            daemon=True,
+            ).start()
     # enddef
 
     def mine_challenge(self, address: str, challenge: Challenge) -> None:
