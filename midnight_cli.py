@@ -479,7 +479,7 @@ class MidnightCLI(BaseMiner):
             f'=== Solution {"Cached" if is_solutoin_cached else "Found"} ===',
             f'address: [{self.addrbook[address]}] {address}',
             f'challenge: {challenge.challenge_id}',
-            f'{solution}',
+            f'solution: {solution}',
             ]))
 
         try:

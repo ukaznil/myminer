@@ -264,13 +264,15 @@ class Tracker:
     # enddef
 
     def get_found_solution(self, address: str, challenge: Challenge) -> Optional[Solution]:
-        list__solution = (
+        query = (
             SolutionModel
             .select()
             .where(
                 (SolutionModel.address == address) &
                 (SolutionModel.challenge_id == challenge.challenge_id) &
                 (SolutionModel.status == SolutionStatus.Found.value)
-                ))
+                )
+        )
+        solutoin = query.first()
 
-        return list__solution.first()
+        return solutoin
