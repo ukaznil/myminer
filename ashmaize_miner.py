@@ -114,7 +114,7 @@ class AshMaizeMiner:
         NUM_BATCHES = 10_000
         preimage_base = self.build_preimage(address=address, challenge=challenge)
         time_start = time.time()
-        last_display = None
+        last_display = time_start
         tries = 0
         while self.is_running() and challenge.is_valid():
             nonces = [self.get_fast_nonce() for _ in range(NUM_BATCHES)]
@@ -131,12 +131,13 @@ class AshMaizeMiner:
             # endfor
 
             tries += NUM_BATCHES
-            sec = int(time.time() - time_start)
-            if ((sec - 1) % (60 * 5) == 0 and last_display != sec) or (tries % 100_000 == 0):
-                self._hashrate[address] = tries / (sec + 1e-9)
+            now = time.time()
+            if now - last_display > 60 * 5 or tries % 100_000 == 0:
+                self._hashrate[address] = tries / (now - time_start)
                 self._tries[address] = tries
+                self._challenge[address] = challenge
 
-                last_display = sec
+                last_display = now
             # endif
         # endwhile
 
