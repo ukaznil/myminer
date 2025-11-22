@@ -156,8 +156,13 @@ class MidnightCLI(BaseMiner):
                 hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
                 tries = safefstr(self.miner.get_tries(address), ',')
                 challenge = self.miner.get_challenge(address)
+                if challenge:
+                    cid = challenge.challenge_id
+                else:
+                    cid = None
+                # endif
 
-                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={challenge}')
+                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={cid}')
             # endfor
 
             print_with_time('\n'.join(msg))
