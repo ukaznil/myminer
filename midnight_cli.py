@@ -523,7 +523,7 @@ class MidnightCLI(BaseMiner):
         # endif
 
         print_with_time('\n'.join([
-            f'=== Solution {"Cached" if is_solutoin_cached else "Found"} ===',
+            f'=== {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
             f'address: [{self.addrbook[address]}] {address}',
             f'challenge: {challenge.challenge_id}',
             f'solution: {solution}',
