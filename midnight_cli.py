@@ -339,7 +339,7 @@ class MidnightCLI(BaseMiner):
                 print('\n'.join([
                     '=== Start This Challenge ===',
                     f'address: [{self.addrbook[address]}] {address}',
-                    f'chalenge:\n{challenge}',
+                    f'{challenge}',
                     '',
                     ]))
 
