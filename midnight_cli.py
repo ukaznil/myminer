@@ -7,7 +7,7 @@ from base_miner import BaseMiner
 from challenge import Challenge
 from project import Project
 from solution import Solution
-from tracker import Status, Tracker
+from tracker import SolutionStatus, Tracker, WorkStatus
 
 
 class MidnightCLI(BaseMiner):
@@ -281,21 +281,25 @@ class MidnightCLI(BaseMiner):
         if not self.tracker.work_exists(address=address, challenge=challenge):
             self.tracker.add_work(address=address, challenge=challenge)
         # endif
-        self.tracker.update_work(address=address, challenge=challenge, status=Status.Working)
+        self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Working)
 
-        try:
-            solution = self.miner.mine(challenge=challenge, address=address, addr_short=self.addrbook[address])
-        finally:
-            self.tracker.update_work(address=address, challenge=challenge, status=Status.Open)
-        # endtry
+        solution = self.tracker.get_found_solution(address=address, challenge=challenge)
+        is_solutoin_cached = (solution is not None)
+        if not is_solutoin_cached:
+            try:
+                solution = self.miner.mine(challenge=challenge, address=address, addr_short=self.addrbook[address])
+                self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
+            finally:
+                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Open)
+            # endtry
+        # endif
         print('\n'.join([
-            f'=== Solution Found ===',
+            f'=== Solution {"Cached" if is_solutoin_cached else "Found"} ===',
             f'address: [{self.addrbook[address]}] {address}',
             f'challenge: {challenge.challenge_id}',
             f'{solution}',
             '',
             ]))
-        self.tracker.add_solution(address=address, challenge=challenge, solution=solution)
 
         try:
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
@@ -308,12 +312,18 @@ class MidnightCLI(BaseMiner):
             ]))
 
         if 'crypto_receipt' in resp.keys():
-            self.tracker.update_work(address=address, challenge=challenge, status=Status.Solved)
+            with self.tracker.db.atomic():
+                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solved)
+                self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Verified)
+            # endwith
             print(f'-> Solved !!!')
         else:
             code = resp.get('statusCode')
             message = resp.get('message')
-            self.tracker.update_work(address=address, challenge=challenge, status=Status.Invalid)
+            with self.tracker.db.atomic():
+                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Invalid)
+                self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Invalid)
+            # endwith
             print(f'-> Solution Invalid. code={code}, message={message}')
         # endif
         print()

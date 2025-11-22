@@ -33,7 +33,7 @@ class ChallengeModel(BaseModel):
     latest_submission_dt: datetime = DateTimeField()
 
 
-class Status(Enum):
+class WorkStatus(Enum):
     Open = auto()
     Working = auto()
     Solved = auto()
@@ -43,10 +43,16 @@ class Status(Enum):
 class WorkModel(BaseModel):
     address: str = TextField()
     challenge_id: str = TextField()
-    status: Status = TextField(choices=[(s.value, s.name) for s in Status])
+    status: WorkStatus = TextField(choices=[(s.value, s.name) for s in WorkStatus])
 
     class Meta:
         primary_key = CompositeKey('address', 'challenge_id')
+
+
+class SolutionStatus(Enum):
+    Found = auto()
+    Verified = auto()
+    Invalid = auto()
 
 
 class SolutionModel(BaseModel):
@@ -55,6 +61,7 @@ class SolutionModel(BaseModel):
     nonce_hex: str = TextField()
     hash_hex: str = TextField()
     tries: int = IntegerField()
+    status: SolutionStatus = TextField(choices=[(s.value, s.name) for s in SolutionStatus])
 
 
 class Tracker:
@@ -63,8 +70,13 @@ class Tracker:
         db.init(db_name)
         db.connect()
         db.create_tables([WalletModel, ChallengeModel, WorkModel, SolutionModel])
+
+        self.db = db
     # enddef
 
+    # -------------------------
+    # wallet
+    # -------------------------
     def add_wallet(self, address: str) -> bool:
         if self.wallet_exists(address):
             return False
@@ -89,6 +101,9 @@ class Tracker:
         return [wallet.address for wallet in wallets]
     # enddef
 
+    # -------------------------
+    # challenge
+    # -------------------------
     def add_challenge(self, challenge: Challenge) -> bool:
         if self.challenge_exists(challenge):
             return False
@@ -118,7 +133,7 @@ class Tracker:
             .select(WorkModel.challenge_id)
             .where(
                 (WorkModel.address == address) &
-                (WorkModel.status == Status.Solved.value)
+                (WorkModel.status == WorkStatus.Solved.value)
                 )
         )
 
@@ -154,7 +169,7 @@ class Tracker:
             .select(WorkModel.challenge_id)
             .where(
                 (WorkModel.address == address) &
-                (WorkModel.status == Status.Solved.value)
+                (WorkModel.status == WorkStatus.Solved.value)
                 )
         )
 
@@ -183,23 +198,58 @@ class Tracker:
         # endif
     # enddef
 
+    # -------------------------
+    # work
+    # -------------------------
     def work_exists(self, address: str, challenge: Challenge) -> bool:
         return WorkModel.select().where(
-            (WorkModel.address == address) & (WorkModel.challenge_id == challenge.challenge_id)
+            (WorkModel.address == address) &
+            (WorkModel.challenge_id == challenge.challenge_id)
             ).exists()
 
     def add_work(self, address: str, challenge: Challenge):
-        WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=Status.Open.value)
+        WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=WorkStatus.Open.value)
     # enddef
 
-    def update_work(self, address: str, challenge: Challenge, status: Status):
-        work = WorkModel.get((WorkModel.address == address) & (WorkModel.challenge_id == challenge.challenge_id))  # type: WorkModel
+    def update_work(self, address: str, challenge: Challenge, status: WorkStatus):
+        work = WorkModel.get(
+            (WorkModel.address == address) &
+            (WorkModel.challenge_id == challenge.challenge_id)
+            )  # type: WorkModel
         if work:
             work.status = status.value
             work.save()
         # endif
     # enddef
 
-    def add_solution(self, address: str, challenge: Challenge, solution: Solution):
-        SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries)
+    # -------------------------
+    # solution
+    # -------------------------
+    def add_solution_found(self, address: str, challenge: Challenge, solution: Solution):
+        SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries,
+                             status=SolutionStatus.Found.value)
     # enddef
+
+    def update_solution(self, address: str, challenge: Challenge, solution: Solution, status: SolutionStatus):
+        solution = SolutionModel.get(
+            (SolutionModel.address == address) &
+            (SolutionModel.challenge_id == challenge.challenge_id) &
+            (SolutionModel.nonce_hex == solution.nonce_hex)
+            )  # type: SolutionModel
+        if solution:
+            solution.status = status.value
+            solution.save()
+        # endif
+    # enddef
+
+    def get_found_solution(self, address: str, challenge: Challenge) -> Optional[Solution]:
+        list__solution = (
+            SolutionModel
+            .select()
+            .where(
+                (SolutionModel.address == address) &
+                (SolutionModel.challenge_id == challenge.challenge_id) &
+                (SolutionModel.status == SolutionStatus.Found)
+                ))
+
+        return list__solution.first()
