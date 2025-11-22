@@ -1,4 +1,5 @@
 import argparse
+import sys
 import threading
 import time
 
@@ -8,6 +9,7 @@ from challenge import Challenge
 from project import Project
 from solution import Solution
 from tracker import SolutionStatus, Tracker, WorkStatus
+from utils import print_with_time, safefstr
 
 
 class MidnightCLI(BaseMiner):
@@ -88,22 +90,81 @@ class MidnightCLI(BaseMiner):
             self.addrbook[address] = f'AD-#{idx_addr}'
         # endfor
 
+        def show_results():
+            msg = []
+            msg.append('=== [R]esults ===')
+            for idx_addr, address in enumerate(list__address):
+                msg.append(f'[{self.addrbook[address]}] {address}')
+                num_open = self.tracker.get_num_work(address=address, status=WorkStatus.Open)
+                num_working = self.tracker.get_num_work(address=address, status=WorkStatus.Working)
+                num_solved = self.tracker.get_num_work(address=address, status=WorkStatus.Solved)
+                num_invalid = self.tracker.get_num_work(address=address, status=WorkStatus.Invalid)
+                msg.append(f'open={num_open}, working={num_working}, solved={num_solved}, invalid={num_invalid}')
+
+                msg.append(f'todo:')
+                list__challenge = self.tracker.get_open_challenges(address)
+                if len(list__challenge) > 0:
+                    for challenge in list__challenge:
+                        msg.append(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
+                    # endfor
+                else:
+                    msg.append(f'- None')
+                # endif
+            # endfor
+            print_with_time('\n'.join(msg))
+        # enddef
+
+        def show_hashrate():
+            msg = []
+            for address in list__address:
+                addr_short = self.addrbook[address]
+                hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
+                tries = safefstr(self.miner.get_tries(address), ',')
+
+                msg.append(f'=== [H]ashrate ===')
+                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}')
+            # endfor
+
+            print_with_time('\n'.join(msg))
+        # enddef
+
         # Thread開始
-        threads = []
+        threads = []  # type: list[threading.Thread]
+        def input_loop():
+            for line in sys.stdin:
+                cmd = line.strip()
+
+                if cmd == 'r':
+                    show_results()
+                elif cmd == 'h':
+                    show_hashrate()
+                elif cmd == 'q':
+                    print_with_time('=== Stopping miner... ===')
+                    self.miner.stop()
+                    break
+                # endif
+            # endfor
+        # enddef
+        threads.append(threading.Thread(target=input_loop, daemon=True))
+
         for address in list__address:
             t = threading.Thread(
                 target=self.mine_loop,
                 args=(address,),
                 daemon=True,  # プロセス終了時に一緒に落ちてOKなら daemon で
                 )
-            t.start()
             threads.append(t)
+        # endfor
+
+        self.miner.start()
+        for thread in threads:
+            thread.start()
         # endfor
 
         time_start = time.time()
         set__sec_fetch_a_new_challenge = set()
         set__sec_addresses_and_works = set()
-        while True:
+        while self.miner.is_running():
             sec = int(time.time() - time_start)
 
             if sec % 30 == 0 and sec not in set__sec_fetch_a_new_challenge:
@@ -112,32 +173,12 @@ class MidnightCLI(BaseMiner):
             # endif
 
             if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
-                msg = []
-                msg.append('=== Addresses / Work Status ===')
-                for idx_addr, address in enumerate(list__address):
-                    msg.append(f'[{self.addrbook[address]}] {address}')
-                    num_open = self.tracker.get_num_work(address=address, status=WorkStatus.Open)
-                    num_working = self.tracker.get_num_work(address=address, status=WorkStatus.Working)
-                    num_solved = self.tracker.get_num_work(address=address, status=WorkStatus.Solved)
-                    num_invalid = self.tracker.get_num_work(address=address, status=WorkStatus.Invalid)
-                    msg.append(f'open={num_open}, working={num_working}, solved={num_solved}, invalid={num_invalid}')
-
-                    msg.append(f'todo:')
-                    list__challenge = self.tracker.get_open_challenges(address)
-                    if len(list__challenge) > 0:
-                        for challenge in list__challenge:
-                            msg.append(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
-                        # endfor
-                    else:
-                        msg.append(f'- None')
-                    # endif
-                # endfor
-                msg.append('')
-                print('\n'.join(msg))
-
+                show_results()
                 set__sec_addresses_and_works.add(sec)
             # endif
         # endwhile
+
+        print_with_time('=== Miner Stopped. ===')
     # enddef
 
     # -------------------------
@@ -179,7 +220,7 @@ class MidnightCLI(BaseMiner):
     def register(self, address: str):
         # tandc
         data = self._get_tandc()
-        print('\n'.join([
+        print_with_time('\n'.join([
             f'== Terms and Conditions ===',
             f'Version: {data.get("version")}',
             f'{data.get("content", "")}',
@@ -192,10 +233,9 @@ class MidnightCLI(BaseMiner):
         signature = input('Signature: ')
         pubkey = input('Public Key: ')
         resp = self._register_address(address=address, signature=signature, pubkey=pubkey)
-        print('\n'.join([
+        print_with_time('\n'.join([
             f'=== Registration response ===',
             f'{resp}',
-            '',
             ]))
 
         # save
@@ -272,10 +312,9 @@ class MidnightCLI(BaseMiner):
 
             # save
             if self.tracker.add_challenge(challenge):
-                print('\n'.join([
+                print_with_time('\n'.join([
                     '=== New Challenge ===',
                     f'{challenge}',
-                    '',
                     ]))
             else:
                 pass
@@ -293,18 +332,24 @@ class MidnightCLI(BaseMiner):
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
             try:
-                solution = self.miner.mine(challenge=challenge, address=address, addr_short=self.addrbook[address])
-                self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
+                solution = self.miner.mine(challenge=challenge, address=address)
+                if solution:
+                    self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
+                # endif
             finally:
                 self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Open)
             # endtry
         # endif
-        print('\n'.join([
+
+        if not self.miner.is_running():
+            return
+        # endif
+
+        print_with_time('\n'.join([
             f'=== Solution {"Cached" if is_solutoin_cached else "Found"} ===',
             f'address: [{self.addrbook[address]}] {address}',
             f'challenge: {challenge.challenge_id}',
             f'{solution}',
-            '',
             ]))
 
         try:
@@ -312,17 +357,18 @@ class MidnightCLI(BaseMiner):
         except Exception as e:
             return
         # endtry
-        print('\n'.join([
+        msg = [
             '=== Solution Submission Response ===',
             f'{resp}',
-            ]))
+            ]
 
         if 'crypto_receipt' in resp.keys():
             with self.tracker.db.atomic():
                 self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solved)
                 self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Verified)
             # endwith
-            print(f'-> Solved !!!')
+            msg.append(f'-> Solved !!!')
+
         else:
             code = resp.get('statusCode')
             message = resp.get('message')
@@ -330,23 +376,22 @@ class MidnightCLI(BaseMiner):
                 self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Invalid)
                 self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Invalid)
             # endwith
-            print(f'-> Solution Invalid. code={code}, message={message}')
+            msg.append(f'-> Solution Invalid. code={code}, message={message}')
         # endif
-        print()
+        print_with_time('\n'.join(msg))
     # enddef
 
     def mine_loop(self, address: str):
-        while True:
+        while self.miner.is_running():
             challenge = self.tracker.get_oldtest_open_challenge(address)
 
             if challenge is None:
                 time.sleep(60)
             else:
-                print('\n'.join([
+                print_with_time('\n'.join([
                     '=== Start this Challenge ===',
                     f'address: [{self.addrbook[address]}] {address}',
                     f'{challenge}',
-                    '',
                     ]))
 
                 self.mine_challenge(address=address, challenge=challenge)

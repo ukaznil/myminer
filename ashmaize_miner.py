@@ -1,9 +1,10 @@
 import secrets
+import threading
 import time
+from typing import Optional
 
 from challenge import Challenge
 from solution import Solution
-
 try:
     import ashmaize_loader
     ashmaize_py = ashmaize_loader.init()
@@ -16,6 +17,23 @@ class AshMaizeMiner:
         self.rom_cache = {}
         self.random_buffer = bytearray(8192)
         self.random_buffer_pos = len(self.random_buffer)
+
+        self._hashrate = dict()
+        self._tries = dict()
+
+        self._stop_event = threading.Event()
+    # enddef
+
+    def start(self):
+        self._stop_event.clear()
+    # enddef
+
+    def stop(self):
+        self._stop_event.set()
+    ##enddef
+
+    def is_running(self) -> bool:
+        return not self._stop_event.is_set()
     # enddef
 
     def get_fast_nonce(self) -> int:
@@ -33,7 +51,15 @@ class AshMaizeMiner:
         return nonce
     # enddef
 
-    def mine(self, challenge: Challenge, address: str, addr_short: str) -> Solution:
+    def get_hashrate(self, address: str) -> float:
+        return self._hashrate.get(address, None)
+    # enndef
+
+    def get_tries(self, address: str) -> int:
+        return self._tries.get(address, None)
+    # enddef
+
+    def mine(self, challenge: Challenge, address: str) -> Optional[Solution]:
         if challenge.no_pre_mine not in self.rom_cache.keys():
             rom = ashmaize_py.build_rom_twostep(key=challenge.no_pre_mine,
                                                 size=1_073_741_824,
@@ -49,7 +75,7 @@ class AshMaizeMiner:
         time_start = time.time()
         last_display = None
         tries = 0
-        while True:
+        while self.is_running():
             nonces = [self.get_fast_nonce() for _ in range(NUM_BATCHES)]
             preimages = [f'{nonce:016x}' + preimage_base for nonce in nonces]
             list__hash_hex = rom.hash_batch(preimages)
@@ -67,18 +93,14 @@ class AshMaizeMiner:
             tries += NUM_BATCHES
             sec = int(time.time() - time_start)
             if ((sec - 1) % (60 * 5) == 0 and last_display != sec) or (tries % 100_000 == 0):
-                hashrate = tries / (sec + 1e-9)
-                print('\n'.join([
-                    f'=== [{addr_short}/{challenge.challenge_id}] Stats ===',
-                    f'Hashrate={hashrate:,.0f} H/s, tries={tries:,}',
-                    '',
-                    ]))
+                self._hashrate[address] = tries / (sec + 1e-9)
+                self._tries[address] = tries
 
                 last_display = sec
             # endif
-
-            # nonces = [(nonce + 1) & ((1 << 64) - 1) for nonce in nonces]
         # endwhile
+
+        return None
     # enddef
 
     @staticmethod
