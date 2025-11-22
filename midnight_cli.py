@@ -176,10 +176,10 @@ class MidnightCLI(BaseMiner):
         print('\n'.join([
             f'== Terms and Conditions ===',
             f'Version: {data.get("version")}',
-            data.get('content', ''),
+            f'{data.get("content", "")}',
             '',
             f'=== Message to sign (wallet CIP-30)',
-            data.get('message', ''),
+            f'{data.get("message", "")}',
             ]))
 
         # register
@@ -188,7 +188,7 @@ class MidnightCLI(BaseMiner):
         resp = self._register_address(address=address, signature=signature, pubkey=pubkey)
         print('\n'.join([
             f'=== Registration response ===',
-            resp,
+            f'{resp}',
             '',
             ]))
 
@@ -268,7 +268,7 @@ class MidnightCLI(BaseMiner):
             if self.tracker.add_challenge(challenge):
                 print('\n'.join([
                     '=== New Challenge ===',
-                    challenge,
+                    f'{challenge}',
                     '',
                     ]))
             else:
@@ -292,7 +292,7 @@ class MidnightCLI(BaseMiner):
             f'=== Solution Found ===',
             f'address: [{self.addrbook[address]}] {address}',
             f'challenge: {challenge.challenge_id}',
-            solution,
+            f'{solution}',
             '',
             ]))
         self.tracker.add_solution(address=address, challenge=challenge, solution=solution)
@@ -304,7 +304,7 @@ class MidnightCLI(BaseMiner):
         # endtry
         print('\n'.join([
             '=== Solution Submission Response ===',
-            resp,
+            f'{resp}',
             ]))
 
         if 'crypto_receipt' in resp.keys():
