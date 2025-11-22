@@ -75,7 +75,7 @@ class AshMaizeMiner:
         time_start = time.time()
         last_display = None
         tries = 0
-        while self.is_running():
+        while self.is_running() and challenge.is_valid():
             nonces = [self.get_fast_nonce() for _ in range(NUM_BATCHES)]
             preimages = [f'{nonce:016x}' + preimage_base for nonce in nonces]
             list__hash_hex = rom.hash_batch(preimages)

@@ -155,6 +155,27 @@ class MidnightCLI(BaseMiner):
             print_with_time('\n'.join(msg))
         # enddef
 
+        def show_statistics():
+            msg = [f'=== [S]tatistics ===']
+            for address in list__address:
+                try:
+                    resp = self._get_statistics(address)
+                    time.sleep(0.1)
+                    receipts = resp['local']['crypto_receipts']
+                    if self.project == Project.MidNight:
+                        raise NotImplementedError
+                    elif self.project == Project.Defensio:
+                        allocation = resp['local']['dfo_allocation'] / 1_000_000
+                    # endif
+                    msg.append(f'[{self.addrbook[address]}] receipts={receipts:,}, allocation={allocation:,}')
+                except:
+                    msg.append(f'[{self.addrbook[address]}] Error')
+                # endtry
+            # endfor
+
+            print_with_time('\n'.join(msg))
+        # enddef
+
         # Thread開始
         threads = []  # type: list[threading.Thread]
         def input_loop():
@@ -165,6 +186,8 @@ class MidnightCLI(BaseMiner):
                     show_results()
                 elif cmd == 'h':
                     show_hashrate()
+                elif cmd == 's':
+                    show_statistics()
                 elif cmd == 'q':
                     print_with_time('=== Stopping miner... ===')
                     self.miner.stop()
@@ -201,6 +224,9 @@ class MidnightCLI(BaseMiner):
 
             if sec % (60 * 10) == 0 and sec not in set__sec_addresses_and_works:
                 show_results()
+                show_hashrate()
+                show_statistics()
+
                 set__sec_addresses_and_works.add(sec)
             # endif
         # endwhile

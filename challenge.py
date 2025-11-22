@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from utils import parse_iso8601_to_utc_naive
 
 
 @dataclass
@@ -19,6 +22,12 @@ class Challenge:
         self.no_pre_mine = ch['no_pre_mine']
         self.no_pre_mine_hour = ch['no_pre_mine_hour']
         self.latest_submission = ch['latest_submission']
+    # enddef
+
+    def is_valid(self) -> bool:
+        latest_submission_dt = parse_iso8601_to_utc_naive(self.latest_submission)
+
+        return latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10)
     # enddef
 
     def __repr__(self) -> str:
