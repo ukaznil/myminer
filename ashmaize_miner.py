@@ -62,6 +62,7 @@ class AshMaizeMiner:
 
         self._hashrate = dict()
         self._tries = dict()
+        self._challenge = dict()
 
         self._stop_event = threading.Event()
     # enddef
@@ -93,12 +94,16 @@ class AshMaizeMiner:
         return nonce
     # enddef
 
-    def get_hashrate(self, address: str) -> float:
+    def get_hashrate(self, address: str) -> Optional[float]:
         return self._hashrate.get(address, None)
     # enndef
 
-    def get_tries(self, address: str) -> int:
+    def get_tries(self, address: str) -> Optional[int]:
         return self._tries.get(address, None)
+    # enddef
+
+    def get_challenge(self, address: str) -> Optional[Challenge]:
+        return self._challenge.get(address, None)
     # enddef
 
     def maintain_cache(self, list__challenge: list[Challenge]):
