@@ -38,11 +38,27 @@ class MidnightCLI(BaseMiner):
             help="ウォレットを登録・設定する"
             )
         wallet_parser.add_argument(
-            "-a", "--address",
+            '-a', '--address',
+            type=str,
             required=True,
             help="ウォレットアドレス (例: 0x...)"
             )
         wallet_parser.set_defaults(func=self.handle_wallet)
+
+        # -------------------------
+        # donate サブコマンド
+        # -------------------------
+        donate_parser = subparsers.add_parser(
+            'donate',
+            help='donation',
+            )
+        donate_parser.add_argument(
+            '-d', '--donate_to',
+            type=str,
+            required=True,
+            help='donation address',
+            )
+        donate_parser.set_defaults(func=self.handle_donate)
 
         # -------------------------
         # mine サブコマンド
@@ -74,21 +90,33 @@ class MidnightCLI(BaseMiner):
         self.base_url = self.project.base_url
         self.tracker = Tracker(project=self.project)
         self.miner = AshMaizeMiner()
+
         self.addrbook = {}
+        self.tracker.get_wallets(0)
 
         args.func(args)
+    # enddef
+
+    def make_addressbook(self, num: int) -> list[str]:
+        list__address = self.tracker.get_wallets(num)
+        self.addrbook.clear()
+        for idx_addr, address in enumerate(list__address):
+            self.addrbook[address] = f'AD-#{idx_addr}'
+        # endfor
+
+        return list__address
     # enddef
 
     def handle_wallet(self, args: argparse.Namespace):
         self.register(address=args.address)
     # enddef
 
+    def handle_donate(self, args: argparse.Namespace):
+        self.donate_all_with_confirmation(donation_address=args.donate_to)
+    # enddef
+
     def handle_mine(self, args: argparse.Namespace):
-        list__address = self.tracker.get_wallets(args.num)
-        self.addrbook = {}
-        for idx_addr, address in enumerate(list__address):
-            self.addrbook[address] = f'AD-#{idx_addr}'
-        # endfor
+        list__address = self.make_addressbook(args.num)
 
         def show_results():
             msg = []
@@ -247,6 +275,83 @@ class MidnightCLI(BaseMiner):
         else:
             print(f'-> Failed to register. address={address}')
         # endif
+    # enddef
+
+    # -------------------------
+    # donate サブコマンド
+    # -------------------------
+    def _get_statistics(self, address: str) -> dict:
+        path = f'statistics/{address}'
+
+        return self._get(path)
+    # enddef
+
+    def _donate_to(self, destionation_address: str, original_address: str, signature: str) -> dict:
+        path = f'donate_to/{destionation_address}/{original_address}/{signature}'
+
+        return self._post(path, {})
+    # enddef
+
+    def donate_to(self, address: str, donation_address: str) -> bool:
+        message_to_sign = f'Assign accumulated Scavenger rights to: {donation_address}'
+        print_with_time('\n'.join([
+            f'address: [{self.addrbook[address]}] {address}',
+            f'=== Message to sign (wallet CIP-30) ===',
+            ]))
+        signature = input(f'{message_to_sign}')
+
+        resp = self._donate_to(destionation_address=donation_address, original_address=address, signature=signature)
+        status = resp.get('status')
+        if status == 'success':
+            print_with_time('\n'.join([
+                '=== Donation Response: Success ===',
+                f'{resp}'
+                ]))
+
+            return True
+        else:
+            message = resp.get('message')
+            error = resp.get('error')
+            status_code = resp.get('status_code')
+            print_with_time('\n'.join([
+                '=== Donetion Response: Error ===',
+                f'status: {status_code}'
+                f'message: {message}',
+                f'error: {error}',
+                ]))
+
+            return False
+        # endif
+    # enddef
+
+    def donate_all(self, donation_address: str, dry_run: bool = False):
+        list__address = self.make_addressbook(0)
+        assert donation_address in list__address, donation_address
+
+        for address in list__address:
+            addr_short = self.addrbook[address]
+
+            resp_statistics = self._get_statistics(address)
+            current_donattoin_address = resp_statistics['local_with_donate']['donation_address']
+            if current_donattoin_address == donation_address:
+                print(f'For [{addr_short}] {address[:7]}...{address[-7:]}, the given donation address={donation_address[:7]}...{donation_address[-7:]} is already set. Skipped.')
+            else:
+                print(f'For [{addr_short}] {address[:7]}...{address[-7:]}, the given donation address={donation_address[:7]}...{donation_address[-7:]} is not set yet.')
+                if dry_run:
+                    print(f'-> Dry-run.')
+                else:
+                    success = self.donate_to(address=address, donation_address=donation_address)
+                # endif
+            # endif
+
+            time.sleep(1)
+        # endfor
+    # enddef
+
+    def donate_all_with_confirmation(self, donation_address: str):
+        pass
+        # self.donate_all(donation_address, dry_run=False)
+        # self.donate_all(donation_address, dry_run=True)
     # enddef
 
     # -------------------------
