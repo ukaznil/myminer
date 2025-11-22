@@ -1,10 +1,11 @@
-import secrets
+import random
 import threading
 import time
 from typing import Optional
 
 from challenge import Challenge
 from solution import Solution
+
 try:
     import ashmaize_loader
     ashmaize_py = ashmaize_loader.init()
@@ -57,8 +58,8 @@ class RomManager:
 
 class AshMaizeMiner:
     def __init__(self):
-        self.random_buffer = bytearray(8192)
-        self.random_buffer_pos = len(self.random_buffer)
+        # self.random_buffer = bytearray(8192)
+        # self.random_buffer_pos = len(self.random_buffer)
 
         self._hashrate = dict()
         self._tries = dict()
@@ -81,17 +82,18 @@ class AshMaizeMiner:
 
     def get_fast_nonce(self) -> int:
         # return secrets.randbits(64)
+        return random.getrandbits(64)
 
-        if self.random_buffer_pos >= len(self.random_buffer):
-            self.random_buffer = bytearray(secrets.token_bytes(8192))
-            self.random_buffer_pos = 0
-        # endif
-
-        nonce_bytes = self.random_buffer[self.random_buffer_pos:self.random_buffer_pos + 8]
-        self.random_buffer_pos += 8
-        nonce = int.from_bytes(nonce_bytes, 'big')
-
-        return nonce
+        # if self.random_buffer_pos >= len(self.random_buffer):
+        #     self.random_buffer = bytearray(secrets.token_bytes(8192))
+        #     self.random_buffer_pos = 0
+        # # endif
+        #
+        # nonce_bytes = self.random_buffer[self.random_buffer_pos:self.random_buffer_pos + 8]
+        # self.random_buffer_pos += 8
+        # nonce = int.from_bytes(nonce_bytes, 'big')
+        #
+        # return nonce
     # enddef
 
     def get_hashrate(self, address: str) -> Optional[float]:
