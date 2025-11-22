@@ -237,7 +237,7 @@ class MidnightCLI(BaseMiner):
 
         last_fetch_a_new_challenge = 0
         last_show_info = 0
-        last_maintain_cache = 0
+        last_maintain_cache = time.time()
         while self.miner.is_running():
             now = time.time()
 
