@@ -12,9 +12,51 @@ except ImportError:
     ashmaize_py = None
 
 
+class RomManager:
+    _lock = threading.Lock()
+    _cache = {}
+
+    @classmethod
+    def get_rom(cls, key: str):
+        with cls._lock:
+            rom = cls._cache.get(key)
+            if rom is None:
+                rom = ashmaize_py.build_rom_twostep(key=key,
+                                                    size=1_073_741_824,
+                                                    pre_size=16_777_216,
+                                                    mixing_numbers=4,
+                                                    )
+                cls._cache[key] = rom
+            # endif
+        # endwith
+
+        return rom
+    # enddef
+
+    @classmethod
+    def clear_all(cls):
+        with cls._lock:
+            cls._cache.clear()
+        # endwith
+    # enddef
+
+    @classmethod
+    def drop(cls, *keys: tuple[str]):
+        with cls._lock:
+            for key in keys:
+                cls._cache.pop(key, None)
+            # endfor
+        # endwith
+    # enddef
+
+    @classmethod
+    def keys(cls) -> set[str]:
+        return cls._cache.keys()
+    # enddef
+
+
 class AshMaizeMiner:
     def __init__(self):
-        self.rom_cache = {}
         self.random_buffer = bytearray(8192)
         self.random_buffer_pos = len(self.random_buffer)
 
@@ -59,16 +101,15 @@ class AshMaizeMiner:
         return self._tries.get(address, None)
     # enddef
 
+    def maintain_cache(self, list__challenge: list[Challenge]):
+        set__key_needed = set([ch.no_pre_mine for ch in list__challenge])
+        list__key_to_drop = [key for key in RomManager.keys() if key not in set__key_needed]
+
+        RomManager.drop(*list__key_to_drop)
+    # enddef
+
     def mine(self, challenge: Challenge, address: str) -> Optional[Solution]:
-        if challenge.no_pre_mine not in self.rom_cache.keys():
-            rom = ashmaize_py.build_rom_twostep(key=challenge.no_pre_mine,
-                                                size=1_073_741_824,
-                                                pre_size=16_777_216,
-                                                mixing_numbers=4,
-                                                )
-            self.rom_cache[challenge.no_pre_mine] = rom
-        # endif
-        rom = self.rom_cache[challenge.no_pre_mine]
+        rom = RomManager.get_rom(challenge.no_pre_mine)
 
         NUM_BATCHES = 10_000
         preimage_base = self.build_preimage(address=address, challenge=challenge)
@@ -84,7 +125,6 @@ class AshMaizeMiner:
                 if self.meets_difficulty(hash_hex=hash_hex, difficulty_hex=challenge.difficulty):
                     nonce = nonces[idx_nonce]
                     nonce_hex = f'{nonce:016x}'
-                    self.rom_cache.clear()
 
                     return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=tries + idx_nonce + 1)
                 # endif
