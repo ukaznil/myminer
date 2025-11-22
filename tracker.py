@@ -10,7 +10,14 @@ from project import Project
 from solution import Solution
 from utils import parse_iso8601_to_utc_naive
 
-db = SqliteDatabase(None)
+db = SqliteDatabase(
+    None,
+    pragmas={
+        'journal_mode': 'wal',
+        'busy_timeout': 5000,
+        },
+    timeout=5.0,
+    )
 
 
 class BaseModel(Model):
