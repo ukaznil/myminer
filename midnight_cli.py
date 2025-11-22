@@ -454,6 +454,11 @@ class MidnightCLI(BaseMiner):
         try:
             challenge_resp = self._get_challenge()
         except Exception as e:
+            print_with_time('\n'.join([
+                f'=== Fetch a new Challenge: Error ===',
+                f'error: {e}'
+                ]))
+
             return
         # endtry
 
