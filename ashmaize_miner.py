@@ -119,7 +119,7 @@ class AshMaizeMiner:
         NUM_BATCHES = 10_000
         preimage_base = self.build_preimage(address=address, challenge=challenge)
         time_start = time.time()
-        last_display = time_start
+        last_display = 0
         tries = 0
         while self.is_running() and challenge.is_valid():
             nonces = [self.get_fast_nonce() for _ in range(NUM_BATCHES)]
