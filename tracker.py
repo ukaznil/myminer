@@ -14,9 +14,9 @@ db = SqliteDatabase(
     None,
     pragmas={
         'journal_mode': 'wal',
-        'busy_timeout': 5000,
+        'busy_timeout': 60_000,
         },
-    timeout=5.0,
+    timeout=60.0,
     )
 
 
