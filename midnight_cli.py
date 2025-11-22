@@ -343,7 +343,7 @@ class MidnightCLI(BaseMiner):
                 time.sleep(60)
             else:
                 print('\n'.join([
-                    '=== Start This Challenge ===',
+                    '=== Start this Challenge ===',
                     f'address: [{self.addrbook[address]}] {address}',
                     f'{challenge}',
                     '',
