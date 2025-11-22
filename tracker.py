@@ -249,7 +249,7 @@ class Tracker:
             .where(
                 (SolutionModel.address == address) &
                 (SolutionModel.challenge_id == challenge.challenge_id) &
-                (SolutionModel.status == SolutionStatus.Found)
+                (SolutionModel.status == SolutionStatus.Found.value)
                 ))
 
         return list__solution.first()
