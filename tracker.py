@@ -182,8 +182,8 @@ class Tracker:
         list__challenge_models = self._query_challenge_models(address=address, list__status=list__status)
 
         list__challenge = []
-        for challenge_model in list__challenge_models:  # type: ChallengeModel
-            list__challenge.append(Challenge.from_challenge_model(challenge_model))
+        for cm in list__challenge_models:
+            list__challenge.append(Challenge.from_challenge_model(challenge_model=cm))
         # endfor
 
         return list__challenge
@@ -226,7 +226,7 @@ class Tracker:
         # endwith
     # enddef
 
-    def get_solving_work(self, address: str) -> Optional[Challenge]:
+    def get_solving_challenge(self, address: str) -> Optional[Challenge]:
         work_solving = (
             WorkModel
             .select()

@@ -124,8 +124,8 @@ class MidnightCLI(BaseMiner):
             for idx_addr, address in enumerate(list__address):
                 msg.append(f'[{self.addrbook[address]}] {address}')
 
-                list__challenge = self.tracker.get_challenges(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Validated])
-                challenge_solving = self.tracker.get_solving_work(address=address)
+                list__challenge = self.tracker.get_challenges(address=address, list__status=[ws for ws in WorkStatus if ws != WorkStatus.Validated])
+                challenge_solving = self.tracker.get_solving_challenge(address=address)
                 if len(list__challenge) > 0:
                     for challenge in list__challenge:
                         if challenge_solving and challenge.challenge_id == challenge_solving.challenge_id:
