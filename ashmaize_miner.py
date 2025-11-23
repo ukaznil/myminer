@@ -178,7 +178,7 @@ class AshMaizeMiner:
                 last_display = now
             # endif
 
-            time.sleep(0.1)
+            time.sleep(0.5)
         # endwhile
 
         return None

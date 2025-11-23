@@ -187,7 +187,8 @@ class MidnightCLI(BaseMiner):
             for address in list__address:
                 try:
                     resp = self._get_statistics(address)
-                    time.sleep(0.1)
+                    time.sleep(0.5)
+                    
                     receipts = resp['local']['crypto_receipts']
                     if self.project == Project.MidNight:
                         raise NotImplementedError
@@ -311,7 +312,7 @@ class MidnightCLI(BaseMiner):
                 last_release_cache = now
             # endif
 
-            time.sleep(0.1)
+            time.sleep(0.5)
         # endwhile
 
         self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
@@ -666,7 +667,7 @@ class MidnightCLI(BaseMiner):
                 self.mine_challenge(address=address, challenge=challenge)
             # endif
 
-            time.sleep(0.1)
+            time.sleep(0.5)
         # endwhile
     # enddef
 
