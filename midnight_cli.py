@@ -108,7 +108,7 @@ class MidnightCLI(BaseMiner):
         list__address = self.tracker.get_wallets(num)
         self.addrbook.clear()
         for idx_addr, address in enumerate(list__address):
-            self.addrbook[address] = f'AD-#{idx_addr}'
+            self.addrbook[address] = f'ADDR-#{idx_addr}'
         # endfor
 
         return list__address
@@ -680,6 +680,7 @@ class MidnightCLI(BaseMiner):
 
             return
         # endtry
+
         msg = [
             f'=== {msgheader} Solution Submission Response ===',
             f'{resp}',
@@ -691,7 +692,6 @@ class MidnightCLI(BaseMiner):
                 self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Validated)
             # endwith
             msg.append(f'-> Solution Validated !!!')
-
         else:
             code = resp.get('statusCode')
             message = resp.get('message')
@@ -701,7 +701,8 @@ class MidnightCLI(BaseMiner):
             # endwith
             msg.append(f'-> Solution Invalid. code={code}, message={message}')
         # endif
-        self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission)
+
+        self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, sufix=msgheader)
     # enddef
 
     def mine_loop(self, address: str):
