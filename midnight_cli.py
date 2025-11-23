@@ -4,6 +4,8 @@ import threading
 import time
 from typing import *
 
+import psutil
+
 from ashmaize_miner import AshMaizeMiner
 from base_miner import BaseMiner
 from challenge import Challenge
@@ -213,12 +215,12 @@ class MidnightCLI(BaseMiner):
             # enddef
 
             def _show_cache_status():
-                cache_info = self.miner.cache_info()
-                size_in_gb = sum(cache_info.values()) / 1_000_000_000
+                cache_info = self.miner.rom_cache_info()
+                size_in_gib = sum(cache_info.values()) / (1024 ** 3)
                 msg = [
                     '=== [C]ached ROM Status ===',
                     f'num: {len(cache_info)}',
-                    f'size: {size_in_gb:,.2f} GB',
+                    f'size: {size_in_gib:,.2f} GiB',
                     ]
 
                 self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
@@ -231,18 +233,45 @@ class MidnightCLI(BaseMiner):
                     ).start()
             # enddef
 
-            def _release_rom_cache():
+            def _maintain_rom_cache():
                 list__challenge = []
                 for address in list__address:
                     list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
                 # endfor
 
-                self.miner.maintain_cache(list__challenge)
+                self.miner.maintain_rom_cache(list__challenge)
             # enddef
 
-            def release_rom_cache():
+            def maintain_rom_cache():
                 threading.Thread(
-                    target=_release_rom_cache,
+                    target=_maintain_rom_cache,
+                    daemon=True,
+                    ).start()
+            # enddef
+
+            def _check_memory():
+                vm = psutil.virtual_memory()
+                is_over_80 = vm.percent > 80.0
+                B_per_GiB = 1024 ** 3
+
+                msg = [
+                    '=== Memory ===',
+                    f'total:     {vm.total / B_per_GiB:7,.2f} GiB',
+                    f'used:      {vm.used / B_per_GiB:7,.2f} GiB ({vm.percent:.1f} %)',
+                    f'available: {vm.available / B_per_GiB:7,.2f} GiB',
+                    f'free:      {vm.free / B_per_GiB:7,.2f} GiB',
+                    f'-> release ROM cache?: {is_over_80}'
+                    ]
+                self.logger.log('\n'.join(msg), log_type=LogType.Memory)
+
+                if is_over_80:
+                    self.miner.release_rom_cache()
+                # endif
+            # enddef
+
+            def check_memory():
+                threading.Thread(
+                    target=_check_memory,
                     daemon=True,
                     ).start()
             # enddef
@@ -288,7 +317,8 @@ class MidnightCLI(BaseMiner):
 
             last_fetch_a_new_challenge = 0
             last_show_info = 0
-            last_release_cache = time.time()
+            last_maintain_cache = time.time()
+            last_check_memory = 0
             while self.miner.is_running():
                 now = time.time()
 
@@ -307,10 +337,16 @@ class MidnightCLI(BaseMiner):
                     last_show_info = now
                 # endif
 
-                if now - last_release_cache > 60 * 30:
-                    release_rom_cache()
+                if now - last_maintain_cache > 60 * 30:
+                    maintain_rom_cache()
 
-                    last_release_cache = now
+                    last_maintain_cache = now
+                # endif
+
+                if now - last_check_memory > 60 * 10:
+                    check_memory()
+
+                    last_check_memory = now
                 # endif
 
                 time.sleep(0.5)

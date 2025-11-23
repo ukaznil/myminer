@@ -1,3 +1,4 @@
 peewee==3.18.3
 pytz==2025.2
 requests==2.32.5
+psutil==7.1.3

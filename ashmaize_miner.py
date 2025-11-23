@@ -130,7 +130,7 @@ class AshMaizeMiner:
         return self._challenge.get(address, None)
     # enddef
 
-    def maintain_cache(self, list__challenge: list[Challenge]):
+    def maintain_rom_cache(self, list__challenge: list[Challenge]):
         assert_type(list__challenge, list, Challenge)
 
         set__key_needed = set([ch.no_pre_mine for ch in list__challenge])
@@ -139,7 +139,11 @@ class AshMaizeMiner:
         _RomManager.drop(*list__key_to_drop)
     # enddef
 
-    def cache_info(self) -> dict:
+    def release_rom_cache(self):
+        _RomManager.clear_all()
+    # enddef
+
+    def rom_cache_info(self) -> dict:
         return _RomManager.status()
     # enddef
 
