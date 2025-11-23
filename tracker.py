@@ -294,7 +294,7 @@ class Tracker:
                 challenge_id=challenge.challenge_id,
                 status=status.value,
                 )
-            .on_conflict_ignore()
+            .on_conflict_replace()
         )
 
         with db_lock:
