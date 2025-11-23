@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 from challenge import Challenge
+from logger import Logger, measure_time
 from solution import Solution
 from utils import assert_type
 
@@ -73,9 +74,11 @@ class _RomManager:
 
 
 class AshMaizeMiner:
-    def __init__(self):
+    def __init__(self, logger: Logger):
         # self.random_buffer = bytearray(8192)
         # self.random_buffer_pos = len(self.random_buffer)
+
+        self.logger = logger
 
         self._hashrate = dict()
         self._tries = dict()
@@ -84,18 +87,22 @@ class AshMaizeMiner:
         self._stop_event = threading.Event()
     # enddef
 
+    @measure_time
     def start(self):
         self._stop_event.clear()
     # enddef
 
+    @measure_time
     def stop(self):
         self._stop_event.set()
     ##enddef
 
+    @measure_time
     def is_running(self) -> bool:
         return not self._stop_event.is_set()
     # enddef
 
+    # @measure_time
     def get_fast_nonce(self) -> int:
         # return secrets.randbits(64)
         return random.getrandbits(64)
@@ -112,24 +119,28 @@ class AshMaizeMiner:
         # return nonce
     # enddef
 
+    @measure_time
     def get_hashrate(self, address: str) -> Optional[float]:
         assert_type(address, str)
 
         return self._hashrate.get(address, None)
     # enndef
 
+    @measure_time
     def get_tries(self, address: str) -> Optional[int]:
         assert_type(address, str)
 
         return self._tries.get(address, None)
     # enddef
 
+    @measure_time
     def get_challenge(self, address: str) -> Optional[Challenge]:
         assert_type(address, str)
 
         return self._challenge.get(address, None)
     # enddef
 
+    @measure_time
     def maintain_rom_cache(self, list__challenge: list[Challenge]):
         assert_type(list__challenge, list, Challenge)
 
@@ -139,14 +150,17 @@ class AshMaizeMiner:
         _RomManager.drop(*list__key_to_drop)
     # enddef
 
+    @measure_time
     def release_rom_cache(self):
         _RomManager.clear_all()
     # enddef
 
+    @measure_time
     def rom_cache_info(self) -> dict[str, int]:
         return _RomManager.status()
     # enddef
 
+    @measure_time
     def mine(self, challenge: Challenge, address: str) -> Optional[Solution]:
         assert_type(challenge, Challenge)
         assert_type(address, str)

@@ -91,10 +91,11 @@ class MidnightCLI(BaseMiner):
         else:
             raise NotImplementedError(args.project)
         # endif
-        self.base_url = self.project.base_url
-        self.tracker = Tracker(project=self.project)
         self.logger = Logger(project=self.project)
-        self.miner = AshMaizeMiner()
+
+        self.base_url = self.project.base_url
+        self.tracker = Tracker(project=self.project, logger=self.logger)
+        self.miner = AshMaizeMiner(logger=self.logger)
 
         self.addrbook = {}
         self.tracker.get_wallets(None)
@@ -102,6 +103,7 @@ class MidnightCLI(BaseMiner):
         args.func(args)
     # enddef
 
+    @measure_time
     def make_addressbook(self, num: Optional[int]) -> list[str]:
         assert_type(num, int, allow_none=True)
 
@@ -114,14 +116,17 @@ class MidnightCLI(BaseMiner):
         return list__address
     # enddef
 
+    @measure_time
     def handle_wallet(self, args: argparse.Namespace):
         self.register(address=args.address)
     # enddef
 
+    @measure_time
     def handle_donate(self, args: argparse.Namespace):
         self.donate_all_with_confirmation(donation_address=args.donate_to)
     # enddef
 
+    @measure_time
     def handle_mine(self, args: argparse.Namespace):
         try:
             list__address = self.make_addressbook(args.num)
@@ -371,6 +376,7 @@ class MidnightCLI(BaseMiner):
     # wallet サブコマンド
     # -------------------------
     def _get_tandc(self) -> dict:
+    @measure_time
         """
         GET /TandC
 
@@ -393,6 +399,7 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def _register_address(self, address: str, signature: str, pubkey: str) -> dict:
+    @measure_time
         """
         POST /register/{address}/{signature}/{pubkey}
 
@@ -407,6 +414,7 @@ class MidnightCLI(BaseMiner):
         return self._post(path, {})
     # enddef
 
+    @measure_time
     def register(self, address: str):
         assert_type(address, str)
 
@@ -446,6 +454,7 @@ class MidnightCLI(BaseMiner):
     # donate サブコマンド
     # -------------------------
     def _get_statistics(self, address: str) -> dict:
+    @measure_time
         assert_type(address, str)
 
         path = f'statistics/{address}'
@@ -454,6 +463,7 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def _donate_to(self, destionation_address: str, original_address: str, signature: str) -> dict:
+    @measure_time
         assert_type(destionation_address, str)
         assert_type(original_address, str)
         assert_type(signature, str)
@@ -464,6 +474,7 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def donate_to(self, address: str, donation_address: str) -> bool:
+    @measure_time
         assert_type(address, str)
         assert_type(donation_address, str)
 
@@ -498,6 +509,7 @@ class MidnightCLI(BaseMiner):
         # endif
     # enddef
 
+    @measure_time
     def donate_all(self, donation_address: str, dry_run: bool = False):
         assert_type(donation_address, str)
         assert_type(dry_run, bool)
@@ -525,6 +537,7 @@ class MidnightCLI(BaseMiner):
         # endfor
     # enddef
 
+    @measure_time
     def donate_all_with_confirmation(self, donation_address: str):
         assert_type(donation_address, str)
 
@@ -537,6 +550,7 @@ class MidnightCLI(BaseMiner):
     # mine サブコマンド
     # -------------------------
     def _get_challenge(self) -> dict:
+    @measure_time
         """
         GET /challenge
 
@@ -553,6 +567,7 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def _submit_solution(self, address: str, challenge: Challenge, solution: Solution) -> dict:
+    @measure_time
         """
         POST /solution/{address}/{challenge_id}/{nonce}
 
@@ -568,6 +583,7 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def _fetch_a_new_challenge(self) -> None:
+    @measure_time
         try:
             challenge_resp = self._get_challenge()
         except Exception as e:
@@ -616,12 +632,14 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def fetch_a_new_challenge(self) -> None:
+    @measure_time
         threading.Thread(
             target=self._fetch_a_new_challenge,
             daemon=True,
             ).start()
     # enddef
 
+    @measure_time
     def mine_challenge(self, address: str, challenge: Challenge) -> None:
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -705,6 +723,7 @@ class MidnightCLI(BaseMiner):
         self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, sufix=msgheader)
     # enddef
 
+    @measure_time
     def mine_loop(self, address: str):
         assert_type(address, str)
 

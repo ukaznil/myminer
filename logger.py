@@ -48,3 +48,28 @@ class Logger:
 
         print(msg, flush=True)
     # enddef
+
+
+def measure_time(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        do_measure_time = True
+
+        if do_measure_time:
+            start = time.time()
+        # endif
+
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            if do_measure_time:
+                end = time.time()
+                elapsed = end - start
+                funcname = func.__qualname__
+                msg = f'[{funcname}] took {elapsed:.1f} sec'
+
+                logger = self.logger  # type: Logger
+                logger.log(msg, log_type=LogType.Func_Time_Measure, sufix=funcname)
+            # endif
+        # endtry
+    return wrapper

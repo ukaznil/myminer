@@ -5,9 +5,9 @@ from enum import Enum, auto
 from typing import Iterable, Optional
 
 from peewee import CompositeKey, DateTimeField, IntegerField, Model, SqliteDatabase, TextField
-from playhouse.sqliteq import SqliteQueueDatabase
 
 from challenge import Challenge
+from logger import Logger, measure_time
 from project import Project
 from solution import Solution
 from utils import assert_type, parse_iso8601_to_utc_naive
@@ -80,7 +80,8 @@ class SolutionModel(BaseModel):
 
 
 class Tracker:
-    def __init__(self, project: Project):
+    @measure_time
+    def __init__(self, project: Project, logger: Logger):
         assert_type(project, Project)
 
         db_name = os.path.join('db', f'{project.name.lower()}.sqlite3')
@@ -90,8 +91,10 @@ class Tracker:
         db.create_tables([WalletModel, ChallengeModel, WorkModel, SolutionModel])
 
         self.db = db
+        self.logger = logger
     # enddef
 
+    @measure_time
     def close(self):
         if not self.db.is_closed():
             self.db.close()
@@ -101,6 +104,7 @@ class Tracker:
     # -------------------------
     # wallet
     # -------------------------
+    @measure_time
     def add_wallet(self, address: str) -> bool:
         assert_type(address, str)
 
@@ -115,6 +119,7 @@ class Tracker:
         # endif
     # enddef
 
+    @measure_time
     def wallet_exists(self, addresss: str) -> bool:
         assert_type(addresss, str)
 
@@ -123,6 +128,7 @@ class Tracker:
             ).exists()
     # enddef
 
+    @measure_time
     def get_wallets(self, num: Optional[int]) -> list[str]:
         assert_type(num, int, allow_none=True)
 
@@ -137,6 +143,7 @@ class Tracker:
     # -------------------------
     # challenge
     # -------------------------
+    @measure_time
     def add_challenge(self, challenge: Challenge) -> bool:
         assert_type(challenge, Challenge)
 
@@ -159,6 +166,7 @@ class Tracker:
         # endif
     # enddef
 
+    @measure_time
     def get_challenge_model(self, challenge_id: str) -> Optional[ChallengeModel]:
         assert_type(challenge_id, str)
 
@@ -167,6 +175,7 @@ class Tracker:
             ).first()
     # enddef
 
+    @measure_time
     def challenge_exists(self, challenge: Challenge) -> bool:
         assert_type(challenge, Challenge)
 
@@ -175,6 +184,7 @@ class Tracker:
             ).exists()
     # enddef
 
+    @measure_time
     def _query_challenge_models(self, address: str, list__status: list[WorkStatus]) -> Iterable[ChallengeModel]:
         assert_type(address, str)
         assert_type(list__status, list, WorkStatus)
@@ -201,6 +211,7 @@ class Tracker:
         return query
     # enddef
 
+    @measure_time
     def get_challenges(self, address: str, list__status: list[WorkStatus]) -> list[Challenge]:
         assert_type(address, str)
         assert_type(list__status, list, WorkStatus)
@@ -215,6 +226,7 @@ class Tracker:
         return list__challenge
     # enddef
 
+    @measure_time
     def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
         assert_type(address, str)
 
@@ -230,6 +242,7 @@ class Tracker:
     # -------------------------
     # work
     # -------------------------
+    @measure_time
     def work_exists(self, address: str, challenge: Challenge) -> bool:
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -238,7 +251,9 @@ class Tracker:
             (WorkModel.address == address) &
             (WorkModel.challenge_id == challenge.challenge_id)
             ).exists()
+    # enddef
 
+    @measure_time
     def add_work(self, address: str, challenge: Challenge):
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -248,6 +263,7 @@ class Tracker:
         # endwith
     # enddef
 
+    @measure_time
     def update_work(self, address: str, challenge: Challenge, status: WorkStatus):
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -264,6 +280,7 @@ class Tracker:
         # endwith
     # enddef
 
+    @measure_time
     def get_solving_challenge(self, address: str) -> Optional[Challenge]:
         assert_type(address, str)
 
@@ -290,6 +307,7 @@ class Tracker:
     # -------------------------
     # solution
     # -------------------------
+    @measure_time
     def add_solution_found(self, address: str, challenge: Challenge, solution: Solution):
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -301,6 +319,7 @@ class Tracker:
         # endwith
     # enddef
 
+    @measure_time
     def update_solution(self, address: str, challenge: Challenge, solution: Solution, status: SolutionStatus):
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -319,6 +338,7 @@ class Tracker:
         # endwith
     # enddef
 
+    @measure_time
     def get_found_solution(self, address: str, challenge: Challenge) -> Optional[Solution]:
         assert_type(address, str)
         assert_type(challenge, Challenge)
