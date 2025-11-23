@@ -111,6 +111,32 @@ class Tracker:
 
         self.db = db
         self.logger = logger
+
+        self._ensure_indexes()
+    # enddef
+
+    def _ensure_indexes(self):
+        # SolutionModel
+        self.db.execute_sql("""
+        CREATE INDEX IF NOT EXISTS idx_solution_address_challenge_nonce
+        ON solutionmodel (address, challenge_id, nonce_hex);
+        """)
+        self.db.execute_sql("""
+        CREATE INDEX IF NOT EXISTS idx_solution_address_challenge_status
+        ON solutionmodel (address, challenge_id, status);
+        """)
+
+        # WorkModel
+        self.db.execute_sql("""
+        CREATE INDEX IF NOT EXISTS idx_work_address_status
+        ON workmodel (address, status);
+        """)
+
+        # ChallengeModel
+        self.db.execute_sql("""
+        CREATE INDEX IF NOT EXISTS idx_challenge_latest_submission_dt
+        ON challengemodel (latest_submission_dt);
+        """)
     # enddef
 
     @measure_time
