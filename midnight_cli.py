@@ -297,6 +297,8 @@ class MidnightCLI(BaseMiner):
 
                 last_maintain_cache = now
             # endif
+
+            time.sleep(0.1)
         # endwhile
 
         self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
@@ -650,6 +652,8 @@ class MidnightCLI(BaseMiner):
             else:
                 self.mine_challenge(address=address, challenge=challenge)
             # endif
+
+            time.sleep(0.1)
         # endwhile
     # enddef
 
