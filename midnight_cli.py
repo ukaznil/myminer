@@ -9,10 +9,10 @@ import psutil
 from ashmaize_miner import AshMaizeMiner
 from base_miner import BaseMiner
 from challenge import Challenge
-from logger import LogType, Logger
+from logger import LogType, Logger, measure_time
 from project import Project
 from solution import Solution
-from tracker import SolutionStatus, Tracker, WorkStatus
+from tracker import Tracker, WorkStatus
 from utils import assert_type, print_with_time, safefstr
 
 
@@ -275,12 +275,15 @@ class MidnightCLI(BaseMiner):
 
                 msg = current_memory_status(vm)
                 msg.append(f'-> release ROM cache?: {release_cache}')
-                if release_cache:
-                    self.miner.release_rom_cache()
-                    msg += current_memory_status(psutil.virtual_memory())
-                # endif
-
                 self.logger.log('\n'.join(msg), log_type=LogType.Memory)
+
+                if release_cache:
+                    show_cache_status()
+
+                    self.miner.release_rom_cache()
+
+                    self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory)
+                # endif
             # enddef
 
             def async_check_memory():
@@ -694,7 +697,7 @@ class MidnightCLI(BaseMiner):
                 f'error: {e}'
                 ]), log_type=LogType.Solution_Submission_Error)
 
-            time.sleep(5)
+            time.sleep(1)
 
             return
         # endtry
