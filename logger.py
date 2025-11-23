@@ -16,6 +16,7 @@ class LogType(Enum):
     Solution_Submission_Error = ('solution_submission_error')
     Fetch_New_Challenge = ('fetch_new_challenge')
     Fetch_New_Challenge_Error = ('fetch_new_challenge_error')
+    Cache_Status = ('cache_status')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)

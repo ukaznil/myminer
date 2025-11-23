@@ -125,7 +125,7 @@ class MidnightCLI(BaseMiner):
 
         def __show_worklist():
             msg = []
-            msg.append('=== [W]orks ===')
+            msg.append('=== [W]orklist ===')
             for idx_addr, address in enumerate(list__address):
                 msg.append(f'[{self.addrbook[address]}] {address}')
 
@@ -210,6 +210,24 @@ class MidnightCLI(BaseMiner):
                 ).start()
         # enddef
 
+        def _show_cache_status():
+            cache_info = self.miner.cache_info()
+            msg = [
+                '=== [C]ached ROM Status ===',
+                f'num: {len(cache_info)}',
+                f'size: {sum(cache_info.values()):,} B',
+                ]
+
+            self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
+        # enddef
+
+        def show_cache_status():
+            threading.Thread(
+                target=_show_cache_status,
+                daemon=True,
+                ).start()
+        # enddef
+
         # Thread開始
         threads = []  # type: list[threading.Thread]
         def input_loop():
@@ -222,12 +240,14 @@ class MidnightCLI(BaseMiner):
                     show_hashrate()
                 elif cmd == 's':
                     show_statistics()
+                elif cmd == 'c':
+                    show_cache_status()
                 elif cmd == 'q':
                     self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                     self.miner.stop()
                     break
                 else:
-                    print(f'Invalid command: {cmd}. Available: ([w]orks, [h]ashrate, [s]tatistics, [q]uit)')
+                    print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [q]uit)")
                 # endif
             # endfor
         # enddef
@@ -263,6 +283,7 @@ class MidnightCLI(BaseMiner):
                 show_worklist()
                 show_hashrate()
                 show_statistics()
+                show_cache_status()
 
                 last_show_info = now
             # endif

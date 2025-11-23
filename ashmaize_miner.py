@@ -14,9 +14,11 @@ except ImportError:
     ashmaize_py = None
 
 
-class RomManager:
+class _RomManager:
     _lock = threading.Lock()
     _cache = {}
+
+    ROM_SIZE = 1_073_741_824
 
     @classmethod
     def get_rom(cls, key: str):
@@ -26,7 +28,7 @@ class RomManager:
             rom = cls._cache.get(key)
             if rom is None:
                 rom = ashmaize_py.build_rom_twostep(key=key,
-                                                    size=1_073_741_824,
+                                                    size=cls.ROM_SIZE,
                                                     pre_size=16_777_216,
                                                     mixing_numbers=4,
                                                     )
@@ -56,8 +58,17 @@ class RomManager:
     # enddef
 
     @classmethod
-    def keys(cls) -> set[str]:
-        return cls._cache.keys()
+    def keys(cls) -> tuple[str]:
+        with cls._lock:
+            return tuple(cls._cache.keys())
+        # endwith
+    # enddef
+
+    @classmethod
+    def status(cls) -> dict[str, int]:
+        with cls._lock:
+            return {key: cls.ROM_SIZE for key, rom in cls._cache.items()}
+        # endwith
     # enddef
 
 
@@ -123,16 +134,20 @@ class AshMaizeMiner:
         assert_type(list__challenge, list, Challenge)
 
         set__key_needed = set([ch.no_pre_mine for ch in list__challenge])
-        list__key_to_drop = [key for key in RomManager.keys() if key not in set__key_needed]
+        list__key_to_drop = [key for key in _RomManager.keys() if key not in set__key_needed]
 
-        RomManager.drop(*list__key_to_drop)
+        _RomManager.drop(*list__key_to_drop)
+    # enddef
+
+    def cache_info(self) -> dict:
+        return _RomManager.status()
     # enddef
 
     def mine(self, challenge: Challenge, address: str) -> Optional[Solution]:
         assert_type(challenge, Challenge)
         assert_type(address, str)
 
-        rom = RomManager.get_rom(challenge.no_pre_mine)
+        rom = _RomManager.get_rom(challenge.no_pre_mine)
 
         NUM_BATCHES = 10_000
         preimage_base = self.build_preimage(address=address, challenge=challenge)
