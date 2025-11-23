@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Iterable, Optional
 
-from peewee import CompositeKey, DateTimeField, IntegerField, Model, SqliteDatabase, TextField
+from peewee import CompositeKey, DateTimeField, IntegerField, JOIN, Model, SqliteDatabase, TextField
 
 from challenge import Challenge
 from logger import Logger, measure_time
@@ -223,22 +223,27 @@ class Tracker:
         assert_type(address, str)
         assert_type(list__status, list, WorkStatus)
 
-        ignore_challenge_id = (
-            WorkModel
-            .select(WorkModel.challenge_id)
-            .where(
-                (WorkModel.address == address) &
-                (WorkModel.status.in_([ws.value for ws in WorkStatus if ws not in list__status]))
-                )
-        )
+        allowed_status_values = [ws.value for ws in list__status]
+        WorkAlias = WorkModel.alias()
 
         query = (
             ChallengeModel
-            .select()
-            .where(
-                (ChallengeModel.challenge_id.not_in(ignore_challenge_id)) &
-                (Challenge.is_valid_dt(ChallengeModel.latest_submission_dt))
+            .select(ChallengeModel)
+            .join(
+                WorkAlias,
+                JOIN.LEFT_OUTER,
+                on=(
+                        (WorkAlias.challenge_id == ChallengeModel.challenge_id) &
+                        (WorkAlias.address == address)
+                ),
                 )
+            .where(
+                # Work が無い（まだ一度も着手していない）か、
+                (WorkAlias.challenge_id.is_null(True)) |
+                # or status が許可リストに入っている
+                (WorkAlias.status.in_(allowed_status_values))
+                )
+            .where(Challenge.is_valid_dt(ChallengeModel.latest_submission_dt))
             .order_by(ChallengeModel.latest_submission_dt.asc())
         )
 
