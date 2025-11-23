@@ -130,7 +130,7 @@ class MidnightCLI(BaseMiner):
                 msg.append(f'open={num_open}, working={num_working}, solved={num_solved}, invalid={num_invalid}')
 
                 msg.append(f'todo:')
-                list__challenge = self.tracker.get_open_challenges(address)
+                list__challenge = self.tracker.get_challenges(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Solved])
                 if len(list__challenge) > 0:
                     for challenge in list__challenge:
                         msg.append(f'- day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
@@ -573,7 +573,7 @@ class MidnightCLI(BaseMiner):
 
     def mine_loop(self, address: str):
         while self.miner.is_running():
-            challenge = self.tracker.get_oldest_open_challenge(address)
+            challenge = self.tracker.get_oldest_unsolved_challenge(address)
 
             if challenge is None:
                 time.sleep(60)

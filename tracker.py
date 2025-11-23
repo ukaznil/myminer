@@ -1,8 +1,8 @@
 import os.path
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum, auto
-from typing import Optional
+from typing import Iterable, Optional
 
 from peewee import CompositeKey, DateTimeField, IntegerField, Model, SqliteDatabase, TextField
 from playhouse.sqliteq import SqliteQueueDatabase
@@ -149,13 +149,13 @@ class Tracker:
             ).exists()
     # enddef
 
-    def get_open_challenges(self, address: str) -> list[Challenge]:
-        solved_challenge_id = (
+    def _query_challenge_models(self, address: str, list__status: list[WorkStatus]) -> Iterable[ChallengeModel]:
+        target_challenge_id = (
             WorkModel
             .select(WorkModel.challenge_id)
             .where(
                 (WorkModel.address == address) &
-                (WorkModel.status == WorkStatus.Solved.value)
+                (WorkModel.status.in_([status.value for status in list__status]))
                 )
         )
 
@@ -163,61 +163,33 @@ class Tracker:
             ChallengeModel
             .select()
             .where(
-                (ChallengeModel.challenge_id.not_in(solved_challenge_id)) &
-                (ChallengeModel.latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10))
+                (ChallengeModel.challenge_id.in_(target_challenge_id)) &
+                (Challenge.is_valid_dt(ChallengeModel.latest_submission_dt))
                 )
             .order_by(ChallengeModel.latest_submission_dt.asc())
         )
 
+        return query
+    # enddef
+
+    def get_challenges(self, address: str, list__status: list[WorkStatus]) -> list[Challenge]:
+        list__challenge_models = self._query_challenge_models(address=address, list__status=list__status)
+
         list__challenge = []
-        for challenge in query:  # type: ChallengeModel
-            list__challenge.append(Challenge({
-                'challenge_id': challenge.challenge_id,
-                'day': challenge.day,
-                'challenge_number': challenge.challenge_number,
-                'difficulty': challenge.difficulty,
-                'no_pre_mine': challenge.no_pre_mine,
-                'no_pre_mine_hour': challenge.no_pre_mine_hour,
-                'latest_submission': challenge.latest_submission,
-                }))
+        for challenge_model in list__challenge_models:  # type: ChallengeModel
+            list__challenge.append(Challenge.from_challenge_model(challenge_model))
         # endfor
 
         return list__challenge
     # enddef
 
-    def get_oldest_open_challenge(self, address: str) -> Optional[Challenge]:
-        solved_challenge_id = (
-            WorkModel
-            .select(WorkModel.challenge_id)
-            .where(
-                (WorkModel.address == address) &
-                (WorkModel.status == WorkStatus.Solved.value)
-                )
-        )
+    def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
+        cm = self._query_challenge_models(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Solved]).first()
 
-        challenge = (
-            ChallengeModel
-            .select()
-            .where(
-                (ChallengeModel.challenge_id.not_in(solved_challenge_id)) &
-                (ChallengeModel.latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10))
-                )
-            .order_by(ChallengeModel.latest_submission_dt.asc())
-            .first()
-        )
-
-        if challenge is None:
+        if cm is None:
             return None
         else:
-            return Challenge({
-                'challenge_id': challenge.challenge_id,
-                'day': challenge.day,
-                'challenge_number': challenge.challenge_number,
-                'difficulty': challenge.difficulty,
-                'no_pre_mine': challenge.no_pre_mine,
-                'no_pre_mine_hour': challenge.no_pre_mine_hour,
-                'latest_submission': challenge.latest_submission,
-                })
+            return Challenge.from_challenge_model(cm)
         # endif
     # enddef
 

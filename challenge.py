@@ -27,7 +27,25 @@ class Challenge:
     def is_valid(self) -> bool:
         latest_submission_dt = parse_iso8601_to_utc_naive(self.latest_submission)
 
+        return self.is_valid_dt(latest_submission_dt)
+    # enddef
+
+    @staticmethod
+    def is_valid_dt(latest_submission_dt: datetime) -> bool:
         return latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10)
+    # enddef
+
+    @staticmethod
+    def from_challenge_model(challenge_model) -> 'Challenge':
+        return Challenge({
+            'challenge_id': challenge_model.challenge_id,
+            'day': challenge_model.day,
+            'challenge_number': challenge_model.challenge_number,
+            'difficulty': challenge_model.difficulty,
+            'no_pre_mine': challenge_model.no_pre_mine,
+            'no_pre_mine_hour': challenge_model.no_pre_mine_hour,
+            'latest_submission': challenge_model.latest_submission,
+            })
     # enddef
 
     def __repr__(self) -> str:
