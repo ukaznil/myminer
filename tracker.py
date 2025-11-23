@@ -47,6 +47,13 @@ class ChallengeModel(BaseModel):
     latest_submission: str = TextField()
     latest_submission_dt: datetime = DateTimeField()
 
+    class Meta:
+        indexes = (
+            (('day', 'challenge_number'), False),  # 必要なら
+            (('latest_submission_dt',), False),  # order_by で頻繁に使うなら
+            )
+    # endclass
+
 
 class WorkStatus(Enum):
     Open = auto()
@@ -62,6 +69,9 @@ class WorkModel(BaseModel):
 
     class Meta:
         primary_key = CompositeKey('address', 'challenge_id')
+        indexes = (
+            (('address', 'status'), False),
+            )
 
 
 class SolutionStatus(Enum):
@@ -77,6 +87,15 @@ class SolutionModel(BaseModel):
     hash_hex: str = TextField()
     tries: int = IntegerField()
     status: SolutionStatus = TextField(choices=[(s.value, s.name) for s in SolutionStatus])
+
+    class Meta:
+        indexes = (
+            # update_solution / delete_solution などで使用
+            (('address', 'challenge_id', 'nonce_hex'), False),
+            # get_found_solution 用
+            (('address', 'challenge_id', 'status'), False),
+            )
+    # endclass
 
 
 class Tracker:
@@ -108,24 +127,19 @@ class Tracker:
     def add_wallet(self, address: str) -> bool:
         assert_type(address, str)
 
-        if self.wallet_exists(address):
-            return False
-        else:
-            with db_lock:
-                WalletModel.create(address=address)
-            # endwith
+        q = (
+            WalletModel
+            .insert(
+                address=address
+                )
+            .on_conflict_ignore()
+        )
 
-            return True
-        # endif
-    # enddef
+        with db_lock:
+            inserted = q.execute()
+        # endwith
 
-    @measure_time
-    def wallet_exists(self, addresss: str) -> bool:
-        assert_type(addresss, str)
-
-        return WalletModel.select().where(
-            WalletModel.address == addresss
-            ).exists()
+        return bool(inserted)
     # enddef
 
     @measure_time
@@ -147,23 +161,26 @@ class Tracker:
     def add_challenge(self, challenge: Challenge) -> bool:
         assert_type(challenge, Challenge)
 
-        if self.challenge_exists(challenge):
-            return False
-        else:
-            with db_lock:
-                ChallengeModel.create(challenge_id=challenge.challenge_id,
-                                      day=challenge.day,
-                                      challenge_number=challenge.challenge_number,
-                                      difficulty=challenge.difficulty,
-                                      no_pre_mine=challenge.no_pre_mine,
-                                      no_pre_mine_hour=challenge.no_pre_mine_hour,
-                                      latest_submission=challenge.latest_submission,
-                                      latest_submission_dt=parse_iso8601_to_utc_naive(challenge.latest_submission)
-                                      )
-            # endwith
+        q = (
+            ChallengeModel
+            .insert(
+                challenge_id=challenge.challenge_id,
+                day=challenge.day,
+                challenge_number=challenge.challenge_number,
+                difficulty=challenge.difficulty,
+                no_pre_mine=challenge.no_pre_mine,
+                no_pre_mine_hour=challenge.no_pre_mine_hour,
+                latest_submission=challenge.latest_submission,
+                latest_submission_dt=parse_iso8601_to_utc_naive(challenge.latest_submission)
+                )
+            .on_conflict_ignore()
+        )
 
-            return True
-        # endif
+        with db_lock:
+            inserted = q.execute()
+        # endwith
+
+        return bool(inserted)
     # enddef
 
     @measure_time
@@ -173,15 +190,6 @@ class Tracker:
         return ChallengeModel.select().where(
             ChallengeModel.challenge_id == challenge_id
             ).first()
-    # enddef
-
-    @measure_time
-    def challenge_exists(self, challenge: Challenge) -> bool:
-        assert_type(challenge, Challenge)
-
-        return ChallengeModel.select().where(
-            ChallengeModel.challenge_id == challenge.challenge_id
-            ).exists()
     # enddef
 
     @measure_time
@@ -243,24 +251,25 @@ class Tracker:
     # work
     # -------------------------
     @measure_time
-    def work_exists(self, address: str, challenge: Challenge) -> bool:
+    def add_work(self, address: str, challenge: Challenge, status: WorkStatus) -> bool:
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        return WorkModel.select().where(
-            (WorkModel.address == address) &
-            (WorkModel.challenge_id == challenge.challenge_id)
-            ).exists()
-    # enddef
-
-    @measure_time
-    def add_work(self, address: str, challenge: Challenge):
-        assert_type(address, str)
-        assert_type(challenge, Challenge)
+        q = (
+            WorkModel
+            .insert(
+                address=address,
+                challenge_id=challenge.challenge_id,
+                status=status.value,
+                )
+            .on_conflict_ignore()
+        )
 
         with db_lock:
-            WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=WorkStatus.Open.value)
+            inserted = q.execute()
         # endwith
+
+        return bool(inserted)
     # enddef
 
     @measure_time
@@ -269,14 +278,17 @@ class Tracker:
         assert_type(challenge, Challenge)
         assert_type(status, WorkStatus)
 
-        with db_lock:
-            (WorkModel
-             .update(status=status.value)
-             .where(
+        q = (
+            WorkModel
+            .update(status=status.value)
+            .where(
                 (WorkModel.address == address) &
                 (WorkModel.challenge_id == challenge.challenge_id)
                 )
-             .execute())
+        )
+
+        with db_lock:
+            q.execute()
         # endwith
     # enddef
 
@@ -313,9 +325,17 @@ class Tracker:
         assert_type(challenge, Challenge)
         assert_type(solution, Solution)
 
+        data = dict(
+            address=address,
+            challenge_id=challenge.challenge_id,
+            nonce_hex=solution.nonce_hex,
+            hash_hex=solution.hash_hex,
+            tries=solution.tries,
+            status=SolutionStatus.Found.value,
+            )
+
         with db_lock:
-            SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries,
-                                 status=SolutionStatus.Found.value)
+            SolutionModel.create(**data)
         # endwith
     # enddef
 
@@ -326,15 +346,18 @@ class Tracker:
         assert_type(solution, Solution)
         assert_type(status, SolutionStatus)
 
-        with db_lock:
-            (SolutionModel
-             .update(status=status.value)
-             .where(
+        q = (
+            SolutionModel
+            .update(status=status.value)
+            .where(
                 (SolutionModel.address == address) &
                 (SolutionModel.challenge_id == challenge.challenge_id) &
                 (SolutionModel.nonce_hex == solution.nonce_hex)
                 )
-             .execute())
+        )
+
+        with db_lock:
+            q.execute()
         # endwith
     # enddef
 
@@ -343,18 +366,53 @@ class Tracker:
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        sm = (SolutionModel
-              .select()
-              .where(
-            (SolutionModel.address == address) &
-            (SolutionModel.challenge_id == challenge.challenge_id) &
-            (SolutionModel.status == SolutionStatus.Found.value)
-            )
-              .first())  # type: SolutionModel
+        sm = (
+            SolutionModel
+            .select()
+            .where(
+                (SolutionModel.address == address) &
+                (SolutionModel.challenge_id == challenge.challenge_id) &
+                (SolutionModel.status == SolutionStatus.Found.value)
+                )
+            .first())  # type: SolutionModel
 
         if sm:
             return Solution(nonce_hex=sm.nonce_hex, hash_hex=sm.hash_hex, tries=sm.tries)
         else:
             return None
         # endif
+    # enddef
+
+    # -------------------------
+    # work & solution
+    # -------------------------
+    @measure_time
+    def update_solution_submission_result(self, address: str, challenge: Challenge, solution: Solution, validated: bool):
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+        assert_type(validated, bool)
+
+        q1 = (
+            WorkModel
+            .update(status=(WorkStatus.Validated if validated else WorkStatus.Invalid).value)
+            .where(
+                (WorkModel.address == address) &
+                (WorkModel.challenge_id == challenge.challenge_id)
+                )
+        )
+
+        q2 = (
+            SolutionModel
+            .update(status=(SolutionStatus.Validated if validated else SolutionStatus.Invalid).value)
+            .where(
+                (SolutionModel.address == address) &
+                (SolutionModel.challenge_id == challenge.challenge_id) &
+                (SolutionModel.nonce_hex == solution.nonce_hex)
+                )
+        )
+
+        with db_lock:
+            q1.execute()
+            q2.execute()
+        # endwith
     # enddef

@@ -647,13 +647,9 @@ class MidnightCLI(BaseMiner):
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
+        self.tracker.add_work(address=address, challenge=challenge, status=WorkStatus.Solving)
+
         msgheader = f'[{self.addrbook[address]}]'
-
-        if not self.tracker.work_exists(address=address, challenge=challenge):
-            self.tracker.add_work(address=address, challenge=challenge)
-        # endif
-        self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solving)
-
         self.logger.log('\n'.join([
             f'=== {msgheader} Start this Challenge ===',
             f'address: {address}',
@@ -708,18 +704,14 @@ class MidnightCLI(BaseMiner):
             ]
 
         if 'crypto_receipt' in resp.keys():
-            with self.tracker.db.atomic():
-                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Validated)
-                self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Validated)
-            # endwith
+            self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=True)
+
             msg.append(f'-> Solution Validated !!!')
         else:
+            self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=False)
+
             code = resp.get('statusCode')
             message = resp.get('message')
-            with self.tracker.db.atomic():
-                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Invalid)
-                self.tracker.update_solution(address=address, challenge=challenge, solution=solution, status=SolutionStatus.Invalid)
-            # endwith
             msg.append(f'-> Solution Invalid. code={code}, message={message}')
         # endif
 
