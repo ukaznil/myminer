@@ -18,14 +18,22 @@ def parse_iso8601_to_utc_naive(s: str) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def print_with_time(msg: str):
+def msg_with_time(msg: str) -> str:
     assert_type(msg, str)
 
     jst = pytz.timezone("Asia/Tokyo")
     now_jst = datetime.now(jst)
-    formatted = now_jst.strftime("%Y/%m/%d %H:%M")
+    formatted = now_jst.strftime("%Y/%m/%d %H:%M:%S")
 
-    print(f'[{formatted}]\n{msg}\n', flush=True)
+    return f'[{formatted}]\n{msg}\n'
+
+
+def print_with_time(msg: str):
+    assert_type(msg, str)
+
+    msg = msg_with_time(msg)
+
+    print(msg, flush=True)
 
 
 def safefstr(v: Any, fmt: str) -> str:

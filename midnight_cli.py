@@ -7,6 +7,7 @@ from typing import *
 from ashmaize_miner import AshMaizeMiner
 from base_miner import BaseMiner
 from challenge import Challenge
+from logger import LogType, Logger
 from project import Project
 from solution import Solution
 from tracker import SolutionStatus, Tracker, WorkStatus
@@ -90,6 +91,7 @@ class MidnightCLI(BaseMiner):
         # endif
         self.base_url = self.project.base_url
         self.tracker = Tracker(project=self.project)
+        self.logger = Logger(project=self.project)
         self.miner = AshMaizeMiner()
 
         self.addrbook = {}
@@ -121,7 +123,7 @@ class MidnightCLI(BaseMiner):
     def handle_mine(self, args: argparse.Namespace):
         list__address = self.make_addressbook(args.num)
 
-        def __show_works():
+        def __show_worklist():
             msg = []
             msg.append('=== [W]orks ===')
             for idx_addr, address in enumerate(list__address):
@@ -143,12 +145,13 @@ class MidnightCLI(BaseMiner):
                     msg.append(f'- None')
                 # endif
             # endfor
-            print_with_time('\n'.join(msg))
+
+            self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
         # enddef
 
-        def show_works():
+        def show_worklist():
             threading.Thread(
-                target=__show_works,
+                target=__show_worklist,
                 daemon=True,
                 ).start()
         # enddef
@@ -169,7 +172,7 @@ class MidnightCLI(BaseMiner):
                 msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={cid}')
             # endfor
 
-            print_with_time('\n'.join(msg))
+            self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
         # enddef
 
         def show_hashrate():
@@ -197,7 +200,7 @@ class MidnightCLI(BaseMiner):
                 # endtry
             # endfor
 
-            print_with_time('\n'.join(msg))
+            self.logger.log('\n'.join(msg), log_type=LogType.Statistics)
         # enddef
 
         def show_statistics():
@@ -214,13 +217,13 @@ class MidnightCLI(BaseMiner):
                 cmd = line.strip()
 
                 if cmd == 'w':
-                    show_works()
+                    show_worklist()
                 elif cmd == 'h':
                     show_hashrate()
                 elif cmd == 's':
                     show_statistics()
                 elif cmd == 'q':
-                    print_with_time('=== Stopping miner... ===')
+                    self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                     self.miner.stop()
                     break
                 else:
@@ -257,7 +260,7 @@ class MidnightCLI(BaseMiner):
             # endif
 
             if now - last_show_info > 60 * 10:
-                show_works()
+                show_worklist()
                 show_hashrate()
                 show_statistics()
 
@@ -275,7 +278,7 @@ class MidnightCLI(BaseMiner):
             # endif
         # endwhile
 
-        print_with_time('=== Miner Stopped. ===')
+        self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
     # enddef
 
     # -------------------------
@@ -482,10 +485,10 @@ class MidnightCLI(BaseMiner):
         try:
             challenge_resp = self._get_challenge()
         except Exception as e:
-            print_with_time('\n'.join([
+            self.logger.log('\n'.join([
                 f'=== Fetch a new Challenge: Error ===',
                 f'error: {e}'
-                ]))
+                ]), log_type=LogType.Fetch_New_Challenge_Error)
             time.sleep(5)
 
             return
@@ -516,10 +519,10 @@ class MidnightCLI(BaseMiner):
 
             # save
             if self.tracker.add_challenge(challenge):
-                print_with_time('\n'.join([
+                self.logger.log('\n'.join([
                     '=== New Challenge ===',
                     f'{challenge}',
-                    ]))
+                    ]), log_type=LogType.Fetch_New_Challenge)
             else:
                 pass
             # endif
@@ -544,11 +547,11 @@ class MidnightCLI(BaseMiner):
         # endif
         self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solving)
 
-        print_with_time('\n'.join([
+        self.logger.log('\n'.join([
             f'=== {msgheader} Start this Challenge ===',
             f'address: {address}',
             f'{challenge}',
-            ]))
+            ]), log_type=LogType.Start_New_Challenge, sufix=msgheader)
 
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
@@ -569,23 +572,23 @@ class MidnightCLI(BaseMiner):
             return
         # endif
 
-        print_with_time('\n'.join([
+        self.logger.log('\n'.join([
             f'=== {msgheader} {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
             f'address: {address}',
             f'challenge: {challenge.challenge_id}',
             f'solution: {solution}',
-            ]))
+            ]), log_type=LogType.Solution_Found, sufix=msgheader)
 
         try:
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
         except Exception as e:
-            print_with_time('\n'.join([
+            self.logger.log('\n'.join([
                 f'=== {msgheader} Solution Submission Error ===',
                 f'address: {address}',
                 f'challenge: {challenge.challenge_id}',
                 f'solution: {solution}',
                 f'error: {e}'
-                ]))
+                ]), log_type=LogType.Solution_Submission_Error)
 
             time.sleep(5)
 
@@ -612,7 +615,7 @@ class MidnightCLI(BaseMiner):
             # endwith
             msg.append(f'-> Solution Invalid. code={code}, message={message}')
         # endif
-        print_with_time('\n'.join(msg))
+        self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission)
     # enddef
 
     def mine_loop(self, address: str):
