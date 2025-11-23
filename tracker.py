@@ -156,12 +156,12 @@ class Tracker:
     # enddef
 
     def _query_challenge_models(self, address: str, list__status: list[WorkStatus]) -> Iterable[ChallengeModel]:
-        target_challenge_id = (
+        ignore_challenge_id = (
             WorkModel
             .select(WorkModel.challenge_id)
             .where(
                 (WorkModel.address == address) &
-                (WorkModel.status.in_([status.value for status in list__status]))
+                (WorkModel.status.in_([ws.value for ws in WorkStatus if ws not in list__status]))
                 )
         )
 
@@ -169,7 +169,7 @@ class Tracker:
             ChallengeModel
             .select()
             .where(
-                (ChallengeModel.challenge_id.in_(target_challenge_id)) &
+                (ChallengeModel.challenge_id.not_in(ignore_challenge_id)) &
                 (Challenge.is_valid_dt(ChallengeModel.latest_submission_dt))
                 )
             .order_by(ChallengeModel.latest_submission_dt.asc())
