@@ -1,23 +1,31 @@
 import os.path
+import threading
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from typing import Optional
 
 from peewee import CompositeKey, DateTimeField, IntegerField, Model, SqliteDatabase, TextField
+from playhouse.sqliteq import SqliteQueueDatabase
 
 from challenge import Challenge
 from project import Project
 from solution import Solution
 from utils import parse_iso8601_to_utc_naive
 
+# db = SqliteQueueDatabase(
 db = SqliteDatabase(
     None,
     pragmas={
         'journal_mode': 'wal',
-        'busy_timeout': 60_000,
+        'busy_timeout': 5_000,
         },
-    timeout=60.0,
+    timeout=5.0,
+    # autostart=False,
+    # queue_max_size=64,
+    # results_timeout=10.0,
     )
+
+db_lock = threading.Lock()
 
 
 class BaseModel(Model):
@@ -75,7 +83,8 @@ class Tracker:
     def __init__(self, project: Project):
         db_name = os.path.join('db', f'{project.name.lower()}.sqlite3')
         db.init(db_name)
-        db.connect()
+        # db.start()
+        db.connect(reuse_if_open=True)
         db.create_tables([WalletModel, ChallengeModel, WorkModel, SolutionModel])
 
         self.db = db
@@ -88,7 +97,10 @@ class Tracker:
         if self.wallet_exists(address):
             return False
         else:
-            WalletModel.create(address=address)
+            with db_lock:
+                WalletModel.create(address=address)
+            # endwith
+
             return True
         # endif
     # enddef
@@ -115,15 +127,18 @@ class Tracker:
         if self.challenge_exists(challenge):
             return False
         else:
-            ChallengeModel.create(challenge_id=challenge.challenge_id,
-                                  day=challenge.day,
-                                  challenge_number=challenge.challange_number,
-                                  difficulty=challenge.difficulty,
-                                  no_pre_mine=challenge.no_pre_mine,
-                                  no_pre_mine_hour=challenge.no_pre_mine_hour,
-                                  latest_submission=challenge.latest_submission,
-                                  latest_submission_dt=parse_iso8601_to_utc_naive(challenge.latest_submission)
-                                  )
+            with db_lock:
+                ChallengeModel.create(challenge_id=challenge.challenge_id,
+                                      day=challenge.day,
+                                      challenge_number=challenge.challange_number,
+                                      difficulty=challenge.difficulty,
+                                      no_pre_mine=challenge.no_pre_mine,
+                                      no_pre_mine_hour=challenge.no_pre_mine_hour,
+                                      latest_submission=challenge.latest_submission,
+                                      latest_submission_dt=parse_iso8601_to_utc_naive(challenge.latest_submission)
+                                      )
+            # endwith
+
             return True
         # endif
     # enddef
@@ -180,7 +195,7 @@ class Tracker:
                 )
         )
 
-        query = (
+        challenge = (
             ChallengeModel
             .select()
             .where(
@@ -188,8 +203,9 @@ class Tracker:
                 (ChallengeModel.latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10))
                 )
             .order_by(ChallengeModel.latest_submission_dt.asc())
+            .first()
         )
-        challenge = query.first()
+
         if challenge is None:
             return None
         else:
@@ -215,18 +231,21 @@ class Tracker:
             ).exists()
 
     def add_work(self, address: str, challenge: Challenge):
-        WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=WorkStatus.Open.value)
+        with db_lock:
+            WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=WorkStatus.Open.value)
+        # endwith
     # enddef
 
     def update_work(self, address: str, challenge: Challenge, status: WorkStatus):
-        work = WorkModel.get(
-            (WorkModel.address == address) &
-            (WorkModel.challenge_id == challenge.challenge_id)
-            )  # type: WorkModel
-        if work:
-            work.status = status.value
-            work.save()
-        # endif
+        with db_lock:
+            (WorkModel
+             .update(status=status.value)
+             .where(
+                (WorkModel.address == address) &
+                (WorkModel.challenge_id == challenge.challenge_id)
+                )
+             .execute())
+        # endwith
     # enddef
 
     def get_num_work(self, address: str, status: WorkStatus) -> int:
@@ -247,37 +266,37 @@ class Tracker:
     # solution
     # -------------------------
     def add_solution_found(self, address: str, challenge: Challenge, solution: Solution):
-        SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries,
-                             status=SolutionStatus.Found.value)
+        with db_lock:
+            SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries,
+                                 status=SolutionStatus.Found.value)
+        # endwith
     # enddef
 
     def update_solution(self, address: str, challenge: Challenge, solution: Solution, status: SolutionStatus):
-        solution = SolutionModel.get(
-            (SolutionModel.address == address) &
-            (SolutionModel.challenge_id == challenge.challenge_id) &
-            (SolutionModel.nonce_hex == solution.nonce_hex)
-            )  # type: SolutionModel
-        if solution:
-            solution.status = status.value
-            solution.save()
-        # endif
+        with db_lock:
+            (SolutionModel
+             .update(status=status.value)
+             .where(
+                (SolutionModel.address == address) &
+                (SolutionModel.challenge_id == challenge.challenge_id) &
+                (SolutionModel.nonce_hex == solution.nonce_hex)
+                )
+             .execute())
+        # endwith
     # enddef
 
     def get_found_solution(self, address: str, challenge: Challenge) -> Optional[Solution]:
-        query = (
-            SolutionModel
-            .select()
-            .where(
-                (SolutionModel.address == address) &
-                (SolutionModel.challenge_id == challenge.challenge_id) &
-                (SolutionModel.status == SolutionStatus.Found.value)
-                )
-        )
-        sm = query.first()  # type: SolutionModel
-        if sm:
-            solution = Solution(nonce_hex=sm.nonce_hex, hash_hex=sm.hash_hex, tries=sm.tries)
+        sm = (SolutionModel
+              .select()
+              .where(
+            (SolutionModel.address == address) &
+            (SolutionModel.challenge_id == challenge.challenge_id) &
+            (SolutionModel.status == SolutionStatus.Found.value)
+            )
+              .first())  # type: SolutionModel
 
-            return solution
+        if sm:
+            return Solution(nonce_hex=sm.nonce_hex, hash_hex=sm.hash_hex, tries=sm.tries)
         else:
             return None
         # endif
