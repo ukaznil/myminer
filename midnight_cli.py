@@ -212,10 +212,11 @@ class MidnightCLI(BaseMiner):
 
         def _show_cache_status():
             cache_info = self.miner.cache_info()
+            size_in_gb = sum(cache_info.values()) / 1_000_000_000
             msg = [
                 '=== [C]ached ROM Status ===',
                 f'num: {len(cache_info)}',
-                f'size: {sum(cache_info.values()):,} B',
+                f'size: {size_in_gb:,.2f} GB',
                 ]
 
             self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
