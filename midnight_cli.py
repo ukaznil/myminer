@@ -542,6 +542,12 @@ class MidnightCLI(BaseMiner):
         # endif
         self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solving)
 
+        print_with_time('\n'.join([
+            '=== Start this Challenge ===',
+            f'address: [{self.addrbook[address]}] {address}',
+            f'{challenge}',
+            ]))
+
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
@@ -616,14 +622,7 @@ class MidnightCLI(BaseMiner):
             if challenge is None:
                 time.sleep(60)
             else:
-                print_with_time('\n'.join([
-                    '=== Start this Challenge ===',
-                    f'address: [{self.addrbook[address]}] {address}',
-                    f'{challenge}',
-                    ]))
-
                 self.mine_challenge(address=address, challenge=challenge)
-                time.sleep(1)
             # endif
         # endwhile
     # enddef
