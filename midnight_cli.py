@@ -573,7 +573,7 @@ class MidnightCLI(BaseMiner):
 
     def mine_loop(self, address: str):
         while self.miner.is_running():
-            challenge = self.tracker.get_oldtest_open_challenge(address)
+            challenge = self.tracker.get_oldest_open_challenge(address)
 
             if challenge is None:
                 time.sleep(60)

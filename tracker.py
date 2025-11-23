@@ -185,7 +185,7 @@ class Tracker:
         return list__challenge
     # enddef
 
-    def get_oldtest_open_challenge(self, address: str) -> Optional[Challenge]:
+    def get_oldest_open_challenge(self, address: str) -> Optional[Challenge]:
         solved_challenge_id = (
             WorkModel
             .select(WorkModel.challenge_id)
