@@ -188,7 +188,7 @@ class MidnightCLI(BaseMiner):
                 try:
                     resp = self._get_statistics(address)
                     time.sleep(0.5)
-                    
+
                     receipts = resp['local']['crypto_receipts']
                     if self.project == Project.MidNight:
                         raise NotImplementedError
@@ -518,7 +518,7 @@ class MidnightCLI(BaseMiner):
         return self._post(path, {})
     # enddef
 
-    def __fetch_a_new_challenge(self) -> None:
+    def _fetch_a_new_challenge(self) -> None:
         try:
             challenge_resp = self._get_challenge()
         except Exception as e:
@@ -568,7 +568,7 @@ class MidnightCLI(BaseMiner):
 
     def fetch_a_new_challenge(self) -> None:
         threading.Thread(
-            target=self.__fetch_a_new_challenge,
+            target=self._fetch_a_new_challenge,
             daemon=True,
             ).start()
     # enddef
