@@ -18,11 +18,15 @@ def parse_iso8601_to_utc_naive(s: str) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def msg_with_time(msg: str) -> str:
+def msg_with_time(msg: str, now: Optional[float]) -> str:
     assert_type(msg, str)
 
     jst = pytz.timezone("Asia/Tokyo")
-    now_jst = datetime.now(jst)
+    if now is None:
+        now_jst = datetime.now(jst)
+    else:
+        now_jst = datetime.fromtimestamp(now, jst)
+    # enif
     formatted = now_jst.strftime("%Y/%m/%d %H:%M:%S")
 
     return f'[{formatted}]\n{msg}\n'

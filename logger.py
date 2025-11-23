@@ -2,7 +2,6 @@ import os
 import time
 from enum import Enum
 from functools import wraps
-from typing import Optional
 
 from project import Project
 from utils import assert_type, msg_with_time
@@ -37,11 +36,12 @@ class Logger:
         self._log_dirname = os.path.join('logs')
     # enddef
 
-    def log(self, msg: str, log_type: LogType, sufix: str = None):
+    def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None):
         assert_type(log_type, LogType)
         assert_type(msg, str)
+        assert_type(now, float, allow_none=True)
 
-        msg = msg_with_time(msg)
+        msg = msg_with_time(msg, now=now)
 
         filepath = os.path.join(self._log_dirname,
                                 f'{log_type.shortname}' + (f'_{sufix}' if sufix else '') + '.log')
@@ -57,7 +57,7 @@ class Logger:
 def measure_time(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        do_measure_time = True
+        do_measure_time = False
 
         if do_measure_time:
             start = time.time()
@@ -73,7 +73,7 @@ def measure_time(func):
                 msg = f'[{funcname}] took {elapsed:.1f} sec'
 
                 logger = self.logger  # type: Logger
-                logger.log(msg, log_type=LogType.Func_Time_Measure, sufix=funcname)
+                logger.log(msg, log_type=LogType.Func_Time_Measure, sufix=funcname, now=end)
             # endif
         # endtry
     return wrapper
