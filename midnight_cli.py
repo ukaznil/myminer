@@ -459,6 +459,7 @@ class MidnightCLI(BaseMiner):
                 f'=== Fetch a new Challenge: Error ===',
                 f'error: {e}'
                 ]))
+            time.sleep(5)
 
             return
         # endtry
@@ -547,6 +548,8 @@ class MidnightCLI(BaseMiner):
                 f'solution: {solution}',
                 f'error: {e}'
                 ]))
+
+            time.sleep(5)
 
             return
         # endtry
