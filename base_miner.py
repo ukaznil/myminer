@@ -16,7 +16,7 @@ class BaseMiner:
         assert_type(path, str)
 
         url = self.base_url.rstrip('/') + '/' + path.lstrip('/')
-        resp = requests.get(url, timeout=15)
+        resp = requests.get(url, timeout=10)
         if not resp.ok:
             raise MinerError(f'GET {url} failed: {resp.status_code} {resp.text}')
         # endif
@@ -32,7 +32,7 @@ class BaseMiner:
         assert_type(path, str)
 
         url = self.base_url.rstrip('/') + '/' + path.lstrip('/')
-        resp = requests.post(url, json=data or {}, timeout=30)
+        resp = requests.post(url, json=data or {}, timeout=10)
         if not resp.ok:
             raise MinerError(f'POST {url} failed: {resp.status_code} {resp.text}')
         # endif
