@@ -537,14 +537,16 @@ class MidnightCLI(BaseMiner):
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
+        msgheader = f'[{self.addrbook[address]}]'
+
         if not self.tracker.work_exists(address=address, challenge=challenge):
             self.tracker.add_work(address=address, challenge=challenge)
         # endif
         self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Solving)
 
         print_with_time('\n'.join([
-            '=== Start this Challenge ===',
-            f'address: [{self.addrbook[address]}] {address}',
+            f'=== {msgheader} Start this Challenge ===',
+            f'address: {address}',
             f'{challenge}',
             ]))
 
@@ -568,8 +570,8 @@ class MidnightCLI(BaseMiner):
         # endif
 
         print_with_time('\n'.join([
-            f'=== {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
-            f'address: [{self.addrbook[address]}] {address}',
+            f'=== {msgheader} {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
+            f'address: {address}',
             f'challenge: {challenge.challenge_id}',
             f'solution: {solution}',
             ]))
@@ -578,8 +580,8 @@ class MidnightCLI(BaseMiner):
             resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
         except Exception as e:
             print_with_time('\n'.join([
-                f'=== Solution Submission Error ===',
-                f'address: [{self.addrbook[address]}] {address}',
+                f'=== {msgheader} Solution Submission Error ===',
+                f'address: {address}',
                 f'challenge: {challenge.challenge_id}',
                 f'solution: {solution}',
                 f'error: {e}'
@@ -590,7 +592,7 @@ class MidnightCLI(BaseMiner):
             return
         # endtry
         msg = [
-            '=== Solution Submission Response ===',
+            f'=== {msgheader} Solution Submission Response ===',
             f'{resp}',
             ]
 
