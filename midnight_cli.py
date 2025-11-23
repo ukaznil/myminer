@@ -293,6 +293,24 @@ class MidnightCLI(BaseMiner):
                     ).start()
             # enddef
 
+            def check_threads():
+                num = len(threading.enumerate())
+
+                msg = [
+                    '=== Threads ===',
+                    f'{num} threads running'
+                    ]
+
+                self.logger.log('\n'.join(msg), log_type=LogType.Thread)
+            # enddef
+
+            def async_check_threads():
+                threading.Thread(
+                    target=check_threads,
+                    daemon=True,
+                    ).start()
+            # enddef
+
             # Thread開始
             threads = []  # type: list[threading.Thread]
             def input_loop():
@@ -307,12 +325,14 @@ class MidnightCLI(BaseMiner):
                         async_show_statistics()
                     elif cmd == 'c':
                         async_show_cache_status()
+                    elif cmd == 't':
+                        async_check_threads()
                     elif cmd == 'q':
                         self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                         self.miner.stop()
                         break
                     else:
-                        print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [q]uit)")
+                        print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [t]hreads, [q]uit)")
                     # endif
                 # endfor
             # enddef
