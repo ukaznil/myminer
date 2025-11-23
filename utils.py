@@ -3,6 +3,8 @@ from typing import *
 
 import pytz
 
+import constants
+
 
 def parse_iso8601_to_utc_naive(s: str) -> datetime:
     assert_type(s, str)
@@ -51,9 +53,7 @@ def safefstr(v: Any, fmt: str) -> str:
 
 
 def assert_type(v: Any, _type: type, item_type: Optional[type] = None, allow_none: bool = False):
-    is_debug = False
-
-    if is_debug:
+    if constants.DEBUG:
         _assert_type(v=v, _type=_type, item_type=item_type, allow_none=allow_none)
     # endif
 

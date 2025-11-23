@@ -3,6 +3,7 @@ import time
 from enum import Enum
 from functools import wraps
 
+import constants
 from project import Project
 from utils import assert_type, msg_with_time
 
@@ -57,16 +58,14 @@ class Logger:
 def measure_time(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        do_measure_time = False
-
-        if do_measure_time:
+        if constants.DEBUG:
             start = time.time()
         # endif
 
         try:
             return func(self, *args, **kwargs)
         finally:
-            if do_measure_time:
+            if constants.DEBUG:
                 end = time.time()
                 elapsed = end - start
                 funcname = func.__qualname__
