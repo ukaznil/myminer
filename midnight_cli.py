@@ -739,7 +739,7 @@ class MidnightCLI(BaseMiner):
                 f'challenge: {challenge.challenge_id}',
                 f'solution: {solution}',
                 f'error: {e}'
-                ]), log_type=LogType.Solution_Submission_Error)
+                ]), log_type=LogType.Solution_Submission_Error, sufix=msgheader)
 
             time.sleep(1)
 
