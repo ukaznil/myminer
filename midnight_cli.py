@@ -131,7 +131,7 @@ class MidnightCLI(BaseMiner):
         try:
             list__address = self.make_addressbook(args.num)
 
-            def __show_worklist():
+            def show_worklist():
                 msg = []
                 msg.append('=== [W]orklist ===')
                 for idx_addr, address in enumerate(list__address):
@@ -157,14 +157,14 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
             # enddef
 
-            def show_worklist():
+            def async_show_worklist():
                 threading.Thread(
-                    target=__show_worklist,
+                    target=show_worklist,
                     daemon=True,
                     ).start()
             # enddef
 
-            def __show_hashrate():
+            def show_hashrate():
                 msg = [f'=== [H]ashrate ===']
                 for address in list__address:
                     addr_short = self.addrbook[address]
@@ -183,18 +183,18 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
             # enddef
 
-            def show_hashrate():
+            def async_show_hashrate():
                 threading.Thread(
-                    target=__show_hashrate,
+                    target=show_hashrate,
                     daemon=True,
                     ).start()
             # enddef
 
-            def __show_statistics():
+            def show_statistics():
                 msg = [f'=== [S]tatistics ===']
                 for address in list__address:
                     try:
-                        resp = self._get_statistics(address)
+                        resp = self.get_statistics(address)
                         time.sleep(0.5)
 
                         receipts = resp['local']['crypto_receipts']
@@ -212,14 +212,14 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Statistics)
             # enddef
 
-            def show_statistics():
+            def async_show_statistics():
                 threading.Thread(
-                    target=__show_statistics,
+                    target=show_statistics,
                     daemon=True,
                     ).start()
             # enddef
 
-            def _show_cache_status():
+            def show_cache_status():
                 cache_info = self.miner.rom_cache_info()
                 size_in_gib = sum(cache_info.values()) / (1024 ** 3)
                 msg = [
@@ -231,14 +231,14 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
             # enddef
 
-            def show_cache_status():
+            def async_show_cache_status():
                 threading.Thread(
-                    target=_show_cache_status,
+                    target=show_cache_status,
                     daemon=True,
                     ).start()
             # enddef
 
-            def _maintain_rom_cache():
+            def maintain_rom_cache():
                 list__challenge = []
                 for address in list__address:
                     list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
@@ -247,15 +247,15 @@ class MidnightCLI(BaseMiner):
                 self.miner.maintain_rom_cache(list__challenge)
             # enddef
 
-            def maintain_rom_cache():
+            def async_maintain_rom_cache():
                 threading.Thread(
-                    target=_maintain_rom_cache,
+                    target=maintain_rom_cache,
                     daemon=True,
                     ).start()
             # enddef
 
-            def _check_memory():
-                def current_memory_status(vm: NamedTuple):
+            def check_memory():
+                def current_memory_status(vm: NamedTuple) -> list[str]:
                     B_per_GiB = 1024 ** 3
 
                     return [
@@ -283,9 +283,9 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Memory)
             # enddef
 
-            def check_memory():
+            def async_check_memory():
                 threading.Thread(
-                    target=_check_memory,
+                    target=check_memory,
                     daemon=True,
                     ).start()
             # enddef
@@ -297,13 +297,13 @@ class MidnightCLI(BaseMiner):
                     cmd = line.strip()
 
                     if cmd == 'w':
-                        show_worklist()
+                        async_show_worklist()
                     elif cmd == 'h':
-                        show_hashrate()
+                        async_show_hashrate()
                     elif cmd == 's':
-                        show_statistics()
+                        async_show_statistics()
                     elif cmd == 'c':
-                        show_cache_status()
+                        async_show_cache_status()
                     elif cmd == 'q':
                         self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                         self.miner.stop()
@@ -337,28 +337,28 @@ class MidnightCLI(BaseMiner):
                 now = time.time()
 
                 if now - last_fetch_a_new_challenge > 60 * 2:
-                    self.fetch_a_new_challenge()
+                    self.async_fetch_a_new_challenge()
 
                     last_fetch_a_new_challenge = now
                 # endif
 
                 if now - last_show_info > 60 * 15:
-                    show_worklist()
-                    show_hashrate()
-                    show_statistics()
-                    show_cache_status()
+                    async_show_worklist()
+                    async_show_hashrate()
+                    async_show_statistics()
+                    async_show_cache_status()
 
                     last_show_info = now
                 # endif
 
                 if now - last_maintain_cache > 60 * 30:
-                    maintain_rom_cache()
+                    async_maintain_rom_cache()
 
                     last_maintain_cache = now
                 # endif
 
                 if now - last_check_memory > 60 * 10:
-                    check_memory()
+                    async_check_memory()
 
                     last_check_memory = now
                 # endif
@@ -375,8 +375,8 @@ class MidnightCLI(BaseMiner):
     # -------------------------
     # wallet サブコマンド
     # -------------------------
-    def _get_tandc(self) -> dict:
     @measure_time
+    def get_tandc(self) -> dict:
         """
         GET /TandC
 
@@ -398,8 +398,8 @@ class MidnightCLI(BaseMiner):
         # endif
     # enddef
 
-    def _register_address(self, address: str, signature: str, pubkey: str) -> dict:
     @measure_time
+    def register_address(self, address: str, signature: str, pubkey: str) -> dict:
         """
         POST /register/{address}/{signature}/{pubkey}
 
@@ -419,7 +419,7 @@ class MidnightCLI(BaseMiner):
         assert_type(address, str)
 
         # tandc
-        data = self._get_tandc()
+        data = self.get_tandc()
         print_with_time('\n'.join([
             f'== Terms and Conditions ===',
             f'Version: {data.get("version")}',
@@ -432,7 +432,7 @@ class MidnightCLI(BaseMiner):
         # register
         signature = input('Signature: ')
         pubkey = input('Public Key: ')
-        resp = self._register_address(address=address, signature=signature, pubkey=pubkey)
+        resp = self.register_address(address=address, signature=signature, pubkey=pubkey)
         print_with_time('\n'.join([
             f'=== Registration response ===',
             f'{resp}',
@@ -453,8 +453,8 @@ class MidnightCLI(BaseMiner):
     # -------------------------
     # donate サブコマンド
     # -------------------------
-    def _get_statistics(self, address: str) -> dict:
     @measure_time
+    def get_statistics(self, address: str) -> dict:
         assert_type(address, str)
 
         path = f'statistics/{address}'
@@ -462,8 +462,8 @@ class MidnightCLI(BaseMiner):
         return self._get(path)
     # enddef
 
-    def _donate_to(self, destionation_address: str, original_address: str, signature: str) -> dict:
     @measure_time
+    def donate_to(self, destionation_address: str, original_address: str, signature: str) -> dict:
         assert_type(destionation_address, str)
         assert_type(original_address, str)
         assert_type(signature, str)
@@ -473,8 +473,8 @@ class MidnightCLI(BaseMiner):
         return self._post(path, {})
     # enddef
 
-    def donate_to(self, address: str, donation_address: str) -> bool:
     @measure_time
+    def donate_each_address(self, address: str, donation_address: str) -> bool:
         assert_type(address, str)
         assert_type(donation_address, str)
 
@@ -485,7 +485,7 @@ class MidnightCLI(BaseMiner):
             ]))
         signature = input(f'{message_to_sign}')
 
-        resp = self._donate_to(destionation_address=donation_address, original_address=address, signature=signature)
+        resp = self.donate_to(destionation_address=donation_address, original_address=address, signature=signature)
         status = resp.get('status')
         if status == 'success':
             print_with_time('\n'.join([
@@ -520,7 +520,7 @@ class MidnightCLI(BaseMiner):
         for address in list__address:
             addr_short = self.addrbook[address]
 
-            resp_statistics = self._get_statistics(address)
+            resp_statistics = self.get_statistics(address)
             current_donattoin_address = resp_statistics['local_with_donate']['donation_address']
             if current_donattoin_address == donation_address:
                 print(f'For [{addr_short}] {address[:7]}...{address[-7:]}, the given donation address={donation_address[:7]}...{donation_address[-7:]} is already set. Skipped.')
@@ -529,7 +529,7 @@ class MidnightCLI(BaseMiner):
                 if dry_run:
                     print(f'-> Dry-run.')
                 else:
-                    success = self.donate_to(address=address, donation_address=donation_address)
+                    success = self.donate_each_address(address=address, donation_address=donation_address)
                 # endif
             # endif
 
@@ -549,8 +549,8 @@ class MidnightCLI(BaseMiner):
     # -------------------------
     # mine サブコマンド
     # -------------------------
-    def _get_challenge(self) -> dict:
     @measure_time
+    def get_challenge(self) -> dict:
         """
         GET /challenge
 
@@ -566,8 +566,8 @@ class MidnightCLI(BaseMiner):
         return self._get('challenge')
     # enddef
 
-    def _submit_solution(self, address: str, challenge: Challenge, solution: Solution) -> dict:
     @measure_time
+    def submit_solution(self, address: str, challenge: Challenge, solution: Solution) -> dict:
         """
         POST /solution/{address}/{challenge_id}/{nonce}
 
@@ -582,10 +582,10 @@ class MidnightCLI(BaseMiner):
         return self._post(path, {})
     # enddef
 
-    def _fetch_a_new_challenge(self) -> None:
     @measure_time
+    def fetch_a_new_challenge(self) -> None:
         try:
-            challenge_resp = self._get_challenge()
+            challenge_resp = self.get_challenge()
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== Fetch a new Challenge: Error ===',
@@ -631,10 +631,10 @@ class MidnightCLI(BaseMiner):
         # endif
     # enddef
 
-    def fetch_a_new_challenge(self) -> None:
     @measure_time
+    def async_fetch_a_new_challenge(self) -> None:
         threading.Thread(
-            target=self._fetch_a_new_challenge,
+            target=self.fetch_a_new_challenge,
             daemon=True,
             ).start()
     # enddef
@@ -684,7 +684,7 @@ class MidnightCLI(BaseMiner):
             ]), log_type=LogType.Solution_Found, sufix=msgheader)
 
         try:
-            resp = self._submit_solution(address=address, challenge=challenge, solution=solution)
+            resp = self.submit_solution(address=address, challenge=challenge, solution=solution)
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {msgheader} Solution Submission Error ===',

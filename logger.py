@@ -1,11 +1,15 @@
 import os
+import time
 from enum import Enum
+from functools import wraps
+from typing import Optional
 
 from project import Project
 from utils import assert_type, msg_with_time
 
 
 class LogType(Enum):
+    Func_Time_Measure = ('func_time_measure')
     System = ('system')
     Worklist = ('worklist')
     Hashrate = ('hashrate')
