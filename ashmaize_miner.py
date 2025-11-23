@@ -97,7 +97,7 @@ class AshMaizeMiner:
         self._stop_event.set()
     ##enddef
 
-    @measure_time
+    # @measure_time
     def is_running(self) -> bool:
         return not self._stop_event.is_set()
     # enddef
