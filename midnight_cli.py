@@ -667,15 +667,21 @@ class MidnightCLI(BaseMiner):
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        self.tracker.add_work(address=address, challenge=challenge, status=WorkStatus.Solving)
-
         msgheader = f'[{self.addrbook[address]}]'
+
+        # =======
+        # Work assign
+        # =======
+        self.tracker.add_work(address=address, challenge=challenge, status=WorkStatus.Solving)
         self.logger.log('\n'.join([
             f'=== {msgheader} Start this Challenge ===',
             f'address: {address}',
             f'{challenge}',
             ]), log_type=LogType.Start_New_Challenge, sufix=msgheader)
 
+        # =======
+        # Find a solution
+        # =======
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
@@ -691,10 +697,6 @@ class MidnightCLI(BaseMiner):
             # endtry
         # endif
 
-        if not self.miner.is_running():
-            return
-        # endif
-
         self.logger.log('\n'.join([
             f'=== {msgheader} {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
             f'address: {address}',
@@ -702,8 +704,34 @@ class MidnightCLI(BaseMiner):
             f'solution: {solution}',
             ]), log_type=LogType.Solution_Found, sufix=msgheader)
 
+        if not self.miner.is_running():
+            return
+        # endif
+
+        # =======
+        # Submit the solution
+        # =======
         try:
             resp = self.submit_solution(address=address, challenge=challenge, solution=solution)
+
+            msg = [
+                f'=== {msgheader} Solution Submission Response ===',
+                f'{resp}',
+                ]
+
+            if 'crypto_receipt' in resp.keys():
+                self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=True)
+
+                msg.append(f'-> Solution Validated !!!')
+            else:
+                self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=False)
+
+                code = resp.get('statusCode')
+                message = resp.get('message')
+                msg.append(f'-> Solution Invalid. code={code}, message={message}')
+            # endif
+
+            self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, sufix=msgheader)
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {msgheader} Solution Submission Error ===',
@@ -717,25 +745,6 @@ class MidnightCLI(BaseMiner):
 
             return
         # endtry
-
-        msg = [
-            f'=== {msgheader} Solution Submission Response ===',
-            f'{resp}',
-            ]
-
-        if 'crypto_receipt' in resp.keys():
-            self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=True)
-
-            msg.append(f'-> Solution Validated !!!')
-        else:
-            self.tracker.update_solution_submission_result(address=address, challenge=challenge, solution=solution, validated=False)
-
-            code = resp.get('statusCode')
-            message = resp.get('message')
-            msg.append(f'-> Solution Invalid. code={code}, message={message}')
-        # endif
-
-        self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, sufix=msgheader)
     # enddef
 
     @measure_time
