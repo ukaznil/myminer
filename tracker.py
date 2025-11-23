@@ -111,9 +111,9 @@ class Tracker:
             ).exists()
     # enddef
 
-    def get_wallets(self, num: int) -> list[str]:
+    def get_wallets(self, num: Optional[int]) -> list[str]:
         wallets = WalletModel.select()
-        if num > 0:
+        if num and num >= 0:
             wallets = wallets.limit(num)
         # endif
 

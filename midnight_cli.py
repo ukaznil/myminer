@@ -92,7 +92,7 @@ class MidnightCLI(BaseMiner):
         self.miner = AshMaizeMiner()
 
         self.addrbook = {}
-        self.tracker.get_wallets(0)
+        self.tracker.get_wallets(None)
 
         args.func(args)
     # enddef
@@ -516,9 +516,11 @@ class MidnightCLI(BaseMiner):
         if not is_solutoin_cached:
             try:
                 solution = self.miner.mine(challenge=challenge, address=address)
-                if solution:
-                    self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
+                if solution is None:
+                    return
                 # endif
+
+                self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
             finally:
                 self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Open)
             # endtry
