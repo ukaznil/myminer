@@ -292,13 +292,13 @@ class MidnightCLI(BaseMiner):
             while self.miner.is_running():
                 now = time.time()
 
-                if now - last_fetch_a_new_challenge > 60 * 1:
+                if now - last_fetch_a_new_challenge > 60 * 2:
                     self.fetch_a_new_challenge()
 
                     last_fetch_a_new_challenge = now
                 # endif
 
-                if now - last_show_info > 60 * 10:
+                if now - last_show_info > 60 * 15:
                     show_worklist()
                     show_hashrate()
                     show_statistics()
@@ -307,7 +307,7 @@ class MidnightCLI(BaseMiner):
                     last_show_info = now
                 # endif
 
-                if now - last_release_cache > 60 * 20:
+                if now - last_release_cache > 60 * 30:
                     release_rom_cache()
 
                     last_release_cache = now
