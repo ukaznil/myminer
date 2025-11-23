@@ -229,6 +229,22 @@ class MidnightCLI(BaseMiner):
                 ).start()
         # enddef
 
+        def _release_rom_cache():
+            list__challenge = []
+            for address in list__address:
+                list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
+            # endfor
+
+            self.miner.maintain_cache(list__challenge)
+        # enddef
+
+        def release_rom_cache():
+            threading.Thread(
+                target=_release_rom_cache,
+                daemon=True,
+                ).start()
+        # enddef
+
         # Thread開始
         threads = []  # type: list[threading.Thread]
         def input_loop():
@@ -270,7 +286,7 @@ class MidnightCLI(BaseMiner):
 
         last_fetch_a_new_challenge = 0
         last_show_info = 0
-        last_maintain_cache = time.time()
+        last_release_cache = time.time()
         while self.miner.is_running():
             now = time.time()
 
@@ -289,14 +305,10 @@ class MidnightCLI(BaseMiner):
                 last_show_info = now
             # endif
 
-            if now - last_maintain_cache > 60 * 20:
-                list__challenge = []
-                for address in list__address:
-                    list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
-                # endfor
-                self.miner.maintain_cache(list__challenge)
+            if now - last_release_cache > 60 * 20:
+                release_rom_cache()
 
-                last_maintain_cache = now
+                last_release_cache = now
             # endif
 
             time.sleep(0.1)
