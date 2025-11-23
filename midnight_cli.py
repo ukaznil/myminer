@@ -121,201 +121,205 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def handle_mine(self, args: argparse.Namespace):
-        list__address = self.make_addressbook(args.num)
+        try:
+            list__address = self.make_addressbook(args.num)
 
-        def __show_worklist():
-            msg = []
-            msg.append('=== [W]orklist ===')
-            for idx_addr, address in enumerate(list__address):
-                msg.append(f'[{self.addrbook[address]}] {address}')
+            def __show_worklist():
+                msg = []
+                msg.append('=== [W]orklist ===')
+                for idx_addr, address in enumerate(list__address):
+                    msg.append(f'[{self.addrbook[address]}] {address}')
 
-                list__challenge = self.tracker.get_challenges(address=address, list__status=[ws for ws in WorkStatus if ws != WorkStatus.Validated])
-                challenge_solving = self.tracker.get_solving_challenge(address=address)
-                if len(list__challenge) > 0:
-                    for challenge in list__challenge:
-                        if challenge_solving and challenge.challenge_id == challenge_solving.challenge_id:
-                            mark = '*'
-                        else:
-                            mark = ' '
-                        # endif
+                    list__challenge = self.tracker.get_challenges(address=address, list__status=[ws for ws in WorkStatus if ws != WorkStatus.Validated])
+                    challenge_solving = self.tracker.get_solving_challenge(address=address)
+                    if len(list__challenge) > 0:
+                        for challenge in list__challenge:
+                            if challenge_solving and challenge.challenge_id == challenge_solving.challenge_id:
+                                mark = '*'
+                            else:
+                                mark = ' '
+                            # endif
 
-                        msg.append(f'- [{mark}] day/ch#={challenge.day}/{challenge.challenge_number}, id={challenge.challenge_id}')
-                    # endfor
-                else:
-                    msg.append(f'- None')
-                # endif
-            # endfor
-
-            self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
-        # enddef
-
-        def show_worklist():
-            threading.Thread(
-                target=__show_worklist,
-                daemon=True,
-                ).start()
-        # enddef
-
-        def __show_hashrate():
-            msg = [f'=== [H]ashrate ===']
-            for address in list__address:
-                addr_short = self.addrbook[address]
-                hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
-                tries = safefstr(self.miner.get_tries(address), ',')
-                challenge = self.miner.get_challenge(address)
-                if challenge:
-                    cid = challenge.challenge_id
-                else:
-                    cid = None
-                # endif
-
-                msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={cid}')
-            # endfor
-
-            self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
-        # enddef
-
-        def show_hashrate():
-            threading.Thread(
-                target=__show_hashrate,
-                daemon=True,
-                ).start()
-        # enddef
-
-        def __show_statistics():
-            msg = [f'=== [S]tatistics ===']
-            for address in list__address:
-                try:
-                    resp = self._get_statistics(address)
-                    time.sleep(0.5)
-
-                    receipts = resp['local']['crypto_receipts']
-                    if self.project == Project.MidNight:
-                        raise NotImplementedError
-                    elif self.project == Project.Defensio:
-                        allocation = resp['local']['dfo_allocation'] / 1_000_000
+                            msg.append(f'- [{mark}] day/ch#={challenge.day}/{challenge.challenge_number}, id={challenge.challenge_id}')
+                        # endfor
+                    else:
+                        msg.append(f'- None')
                     # endif
-                    msg.append(f'[{self.addrbook[address]}] receipts={receipts:,}, allocation={allocation:,}')
-                except:
-                    msg.append(f'[{self.addrbook[address]}] Error')
-                # endtry
-            # endfor
+                # endfor
 
-            self.logger.log('\n'.join(msg), log_type=LogType.Statistics)
-        # enddef
+                self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
+            # enddef
 
-        def show_statistics():
-            threading.Thread(
-                target=__show_statistics,
-                daemon=True,
-                ).start()
-        # enddef
+            def show_worklist():
+                threading.Thread(
+                    target=__show_worklist,
+                    daemon=True,
+                    ).start()
+            # enddef
 
-        def _show_cache_status():
-            cache_info = self.miner.cache_info()
-            size_in_gb = sum(cache_info.values()) / 1_000_000_000
-            msg = [
-                '=== [C]ached ROM Status ===',
-                f'num: {len(cache_info)}',
-                f'size: {size_in_gb:,.2f} GB',
-                ]
+            def __show_hashrate():
+                msg = [f'=== [H]ashrate ===']
+                for address in list__address:
+                    addr_short = self.addrbook[address]
+                    hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
+                    tries = safefstr(self.miner.get_tries(address), ',')
+                    challenge = self.miner.get_challenge(address)
+                    if challenge:
+                        cid = challenge.challenge_id
+                    else:
+                        cid = None
+                    # endif
 
-            self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
-        # enddef
+                    msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={cid}')
+                # endfor
 
-        def show_cache_status():
-            threading.Thread(
-                target=_show_cache_status,
-                daemon=True,
-                ).start()
-        # enddef
+                self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
+            # enddef
 
-        def _release_rom_cache():
-            list__challenge = []
+            def show_hashrate():
+                threading.Thread(
+                    target=__show_hashrate,
+                    daemon=True,
+                    ).start()
+            # enddef
+
+            def __show_statistics():
+                msg = [f'=== [S]tatistics ===']
+                for address in list__address:
+                    try:
+                        resp = self._get_statistics(address)
+                        time.sleep(0.5)
+
+                        receipts = resp['local']['crypto_receipts']
+                        if self.project == Project.MidNight:
+                            raise NotImplementedError
+                        elif self.project == Project.Defensio:
+                            allocation = resp['local']['dfo_allocation'] / 1_000_000
+                        # endif
+                        msg.append(f'[{self.addrbook[address]}] receipts={receipts:,}, allocation={allocation:,}')
+                    except:
+                        msg.append(f'[{self.addrbook[address]}] Error')
+                    # endtry
+                # endfor
+
+                self.logger.log('\n'.join(msg), log_type=LogType.Statistics)
+            # enddef
+
+            def show_statistics():
+                threading.Thread(
+                    target=__show_statistics,
+                    daemon=True,
+                    ).start()
+            # enddef
+
+            def _show_cache_status():
+                cache_info = self.miner.cache_info()
+                size_in_gb = sum(cache_info.values()) / 1_000_000_000
+                msg = [
+                    '=== [C]ached ROM Status ===',
+                    f'num: {len(cache_info)}',
+                    f'size: {size_in_gb:,.2f} GB',
+                    ]
+
+                self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
+            # enddef
+
+            def show_cache_status():
+                threading.Thread(
+                    target=_show_cache_status,
+                    daemon=True,
+                    ).start()
+            # enddef
+
+            def _release_rom_cache():
+                list__challenge = []
+                for address in list__address:
+                    list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
+                # endfor
+
+                self.miner.maintain_cache(list__challenge)
+            # enddef
+
+            def release_rom_cache():
+                threading.Thread(
+                    target=_release_rom_cache,
+                    daemon=True,
+                    ).start()
+            # enddef
+
+            # Thread開始
+            threads = []  # type: list[threading.Thread]
+            def input_loop():
+                for line in sys.stdin:
+                    cmd = line.strip()
+
+                    if cmd == 'w':
+                        show_worklist()
+                    elif cmd == 'h':
+                        show_hashrate()
+                    elif cmd == 's':
+                        show_statistics()
+                    elif cmd == 'c':
+                        show_cache_status()
+                    elif cmd == 'q':
+                        self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
+                        self.miner.stop()
+                        break
+                    else:
+                        print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [q]uit)")
+                    # endif
+                # endfor
+            # enddef
+            threads.append(threading.Thread(target=input_loop, daemon=True))
+
             for address in list__address:
-                list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
+                t = threading.Thread(
+                    target=self.mine_loop,
+                    args=(address,),
+                    daemon=True,  # プロセス終了時に一緒に落ちてOKなら daemon で
+                    )
+                threads.append(t)
             # endfor
 
-            self.miner.maintain_cache(list__challenge)
-        # enddef
+            self.miner.start()
+            for thread in threads:
+                thread.start()
+            # endfor
 
-        def release_rom_cache():
-            threading.Thread(
-                target=_release_rom_cache,
-                daemon=True,
-                ).start()
-        # enddef
+            last_fetch_a_new_challenge = 0
+            last_show_info = 0
+            last_release_cache = time.time()
+            while self.miner.is_running():
+                now = time.time()
 
-        # Thread開始
-        threads = []  # type: list[threading.Thread]
-        def input_loop():
-            for line in sys.stdin:
-                cmd = line.strip()
+                if now - last_fetch_a_new_challenge > 60 * 1:
+                    self.fetch_a_new_challenge()
 
-                if cmd == 'w':
-                    show_worklist()
-                elif cmd == 'h':
-                    show_hashrate()
-                elif cmd == 's':
-                    show_statistics()
-                elif cmd == 'c':
-                    show_cache_status()
-                elif cmd == 'q':
-                    self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
-                    self.miner.stop()
-                    break
-                else:
-                    print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [q]uit)")
+                    last_fetch_a_new_challenge = now
                 # endif
-            # endfor
-        # enddef
-        threads.append(threading.Thread(target=input_loop, daemon=True))
 
-        for address in list__address:
-            t = threading.Thread(
-                target=self.mine_loop,
-                args=(address,),
-                daemon=True,  # プロセス終了時に一緒に落ちてOKなら daemon で
-                )
-            threads.append(t)
-        # endfor
+                if now - last_show_info > 60 * 10:
+                    show_worklist()
+                    show_hashrate()
+                    show_statistics()
+                    show_cache_status()
 
-        self.miner.start()
-        for thread in threads:
-            thread.start()
-        # endfor
+                    last_show_info = now
+                # endif
 
-        last_fetch_a_new_challenge = 0
-        last_show_info = 0
-        last_release_cache = time.time()
-        while self.miner.is_running():
-            now = time.time()
+                if now - last_release_cache > 60 * 20:
+                    release_rom_cache()
 
-            if now - last_fetch_a_new_challenge > 60 * 1:
-                self.fetch_a_new_challenge()
+                    last_release_cache = now
+                # endif
 
-                last_fetch_a_new_challenge = now
-            # endif
+                time.sleep(0.5)
+            # endwhile
 
-            if now - last_show_info > 60 * 10:
-                show_worklist()
-                show_hashrate()
-                show_statistics()
-                show_cache_status()
-
-                last_show_info = now
-            # endif
-
-            if now - last_release_cache > 60 * 20:
-                release_rom_cache()
-
-                last_release_cache = now
-            # endif
-
-            time.sleep(0.5)
-        # endwhile
-
-        self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
+            self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
+        finally:
+            self.tracker.close()
+        # endtry
     # enddef
 
     # -------------------------

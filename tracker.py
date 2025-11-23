@@ -92,6 +92,12 @@ class Tracker:
         self.db = db
     # enddef
 
+    def close(self):
+        if not self.db.is_closed():
+            self.db.close()
+        # endif
+    # enddef
+
     # -------------------------
     # wallet
     # -------------------------
