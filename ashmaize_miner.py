@@ -143,7 +143,7 @@ class AshMaizeMiner:
         _RomManager.clear_all()
     # enddef
 
-    def rom_cache_info(self) -> dict:
+    def rom_cache_info(self) -> dict[str, int]:
         return _RomManager.status()
     # enddef
 

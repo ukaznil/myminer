@@ -250,23 +250,32 @@ class MidnightCLI(BaseMiner):
             # enddef
 
             def _check_memory():
+                def current_memory_status(vm: NamedTuple):
+                    B_per_GiB = 1024 ** 3
+
+                    return [
+                        '=== Memory ===',
+                        f'total:     {vm.total / B_per_GiB:7,.2f} GiB',
+                        f'used:      {vm.used / B_per_GiB:7,.2f} GiB ({vm.percent:.1f} %)',
+                        f'available: {vm.available / B_per_GiB:7,.2f} GiB',
+                        f'free:      {vm.free / B_per_GiB:7,.2f} GiB',
+                        ]
+                # enddef
+
+                rom_cache = self.miner.rom_cache_info()
+                memory_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
+
                 vm = psutil.virtual_memory()
-                is_over_80 = vm.percent > 80.0
-                B_per_GiB = 1024 ** 3
+                release_cache = (vm.percent > 80) or (vm.available < memory_avg)
 
-                msg = [
-                    '=== Memory ===',
-                    f'total:     {vm.total / B_per_GiB:7,.2f} GiB',
-                    f'used:      {vm.used / B_per_GiB:7,.2f} GiB ({vm.percent:.1f} %)',
-                    f'available: {vm.available / B_per_GiB:7,.2f} GiB',
-                    f'free:      {vm.free / B_per_GiB:7,.2f} GiB',
-                    f'-> release ROM cache?: {is_over_80}'
-                    ]
-                self.logger.log('\n'.join(msg), log_type=LogType.Memory)
-
-                if is_over_80:
+                msg = current_memory_status(vm)
+                msg.append(f'-> release ROM cache?: {release_cache}')
+                if release_cache:
                     self.miner.release_rom_cache()
+                    msg += current_memory_status(psutil.virtual_memory())
                 # endif
+
+                self.logger.log('\n'.join(msg), log_type=LogType.Memory)
             # enddef
 
             def check_memory():
