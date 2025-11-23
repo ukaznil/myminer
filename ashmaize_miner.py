@@ -5,6 +5,7 @@ from typing import Optional
 
 from challenge import Challenge
 from solution import Solution
+from utils import assert_type
 
 try:
     import ashmaize_loader
@@ -19,6 +20,8 @@ class RomManager:
 
     @classmethod
     def get_rom(cls, key: str):
+        assert_type(key, str)
+
         with cls._lock:
             rom = cls._cache.get(key)
             if rom is None:
@@ -43,6 +46,8 @@ class RomManager:
 
     @classmethod
     def drop(cls, *keys: tuple[str]):
+        assert_type(keys, tuple, str)
+
         with cls._lock:
             for key in keys:
                 cls._cache.pop(key, None)
@@ -97,18 +102,26 @@ class AshMaizeMiner:
     # enddef
 
     def get_hashrate(self, address: str) -> Optional[float]:
+        assert_type(address, str)
+
         return self._hashrate.get(address, None)
     # enndef
 
     def get_tries(self, address: str) -> Optional[int]:
+        assert_type(address, str)
+
         return self._tries.get(address, None)
     # enddef
 
     def get_challenge(self, address: str) -> Optional[Challenge]:
+        assert_type(address, str)
+
         return self._challenge.get(address, None)
     # enddef
 
     def maintain_cache(self, list__challenge: list[Challenge]):
+        assert_type(list__challenge, list, Challenge)
+
         set__key_needed = set([ch.no_pre_mine for ch in list__challenge])
         list__key_to_drop = [key for key in RomManager.keys() if key not in set__key_needed]
 
@@ -116,6 +129,9 @@ class AshMaizeMiner:
     # enddef
 
     def mine(self, challenge: Challenge, address: str) -> Optional[Solution]:
+        assert_type(challenge, Challenge)
+        assert_type(address, str)
+
         rom = RomManager.get_rom(challenge.no_pre_mine)
 
         NUM_BATCHES = 10_000
@@ -153,6 +169,9 @@ class AshMaizeMiner:
 
     @staticmethod
     def build_preimage(address: str, challenge: Challenge) -> str:
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
         preimage_str = (
                 address
                 + challenge.challenge_id
@@ -174,7 +193,10 @@ class AshMaizeMiner:
     #     (hash_prefix & ~difficulty_mask) == 0
     # なら条件を満たす  [oai_citation:3‡45047878.fs1.hubspotusercontent-na1.net](https://45047878.fs1.hubspotusercontent-na1.net/hubfs/45047878/Midnight%20-%20Whitepaper%20treatment%20for%20Scavenger%20Mine%20API%20V3.pdf)
     @staticmethod
-    def meets_difficulty(hash_hex: bytes, difficulty_hex: str) -> bool:
+    def meets_difficulty(hash_hex: str, difficulty_hex: str) -> bool:
+        assert_type(hash_hex, str)
+        assert_type(difficulty_hex, str)
+
         hash_value = int(hash_hex[:8], 16)
         difficulty_value = int(difficulty_hex[:8], 16)
 

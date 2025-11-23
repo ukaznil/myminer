@@ -2,6 +2,7 @@ import argparse
 import sys
 import threading
 import time
+from typing import *
 
 from ashmaize_miner import AshMaizeMiner
 from base_miner import BaseMiner
@@ -9,7 +10,7 @@ from challenge import Challenge
 from project import Project
 from solution import Solution
 from tracker import SolutionStatus, Tracker, WorkStatus
-from utils import print_with_time, safefstr
+from utils import assert_type, print_with_time, safefstr
 
 
 class MidnightCLI(BaseMiner):
@@ -97,7 +98,9 @@ class MidnightCLI(BaseMiner):
         args.func(args)
     # enddef
 
-    def make_addressbook(self, num: int) -> list[str]:
+    def make_addressbook(self, num: Optional[int]) -> list[str]:
+        assert_type(num, int, allow_none=True)
+
         list__address = self.tracker.get_wallets(num)
         self.addrbook.clear()
         for idx_addr, address in enumerate(list__address):
@@ -306,12 +309,18 @@ class MidnightCLI(BaseMiner):
 
         All params are passed in the URL path, body is {}.
         """
+        assert_type(address, str)
+        assert_type(signature, str)
+        assert_type(pubkey, str)
+
         path = f'register/{address}/{signature}/{pubkey}'
 
         return self._post(path, {})
     # enddef
 
     def register(self, address: str):
+        assert_type(address, str)
+
         # tandc
         data = self._get_tandc()
         print_with_time('\n'.join([
@@ -348,18 +357,27 @@ class MidnightCLI(BaseMiner):
     # donate サブコマンド
     # -------------------------
     def _get_statistics(self, address: str) -> dict:
+        assert_type(address, str)
+
         path = f'statistics/{address}'
 
         return self._get(path)
     # enddef
 
     def _donate_to(self, destionation_address: str, original_address: str, signature: str) -> dict:
+        assert_type(destionation_address, str)
+        assert_type(original_address, str)
+        assert_type(signature, str)
+
         path = f'donate_to/{destionation_address}/{original_address}/{signature}'
 
         return self._post(path, {})
     # enddef
 
     def donate_to(self, address: str, donation_address: str) -> bool:
+        assert_type(address, str)
+        assert_type(donation_address, str)
+
         message_to_sign = f'Assign accumulated Scavenger rights to: {donation_address}'
         print_with_time('\n'.join([
             f'address: [{self.addrbook[address]}] {address}',
@@ -392,7 +410,10 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def donate_all(self, donation_address: str, dry_run: bool = False):
-        list__address = self.make_addressbook(0)
+        assert_type(donation_address, str)
+        assert_type(dry_run, bool)
+
+        list__address = self.make_addressbook(None)
         assert donation_address in list__address, donation_address
 
         for address in list__address:
@@ -416,6 +437,8 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def donate_all_with_confirmation(self, donation_address: str):
+        assert_type(donation_address, str)
+
         pass
         # self.donate_all(donation_address, dry_run=False)
         # self.donate_all(donation_address, dry_run=True)
@@ -446,6 +469,10 @@ class MidnightCLI(BaseMiner):
 
         Body is {}.
         """
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+        assert_type(solution, Solution)
+
         path = f'/solution/{address}/{challenge.challenge_id}/{solution.nonce_hex}'
 
         return self._post(path, {})
@@ -507,6 +534,9 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def mine_challenge(self, address: str, challenge: Challenge) -> None:
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
         if not self.tracker.work_exists(address=address, challenge=challenge):
             self.tracker.add_work(address=address, challenge=challenge)
         # endif
@@ -578,6 +608,8 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     def mine_loop(self, address: str):
+        assert_type(address, str)
+
         while self.miner.is_running():
             challenge = self.tracker.get_oldest_unsolved_challenge(address)
 

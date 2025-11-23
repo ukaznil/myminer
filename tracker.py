@@ -10,7 +10,7 @@ from playhouse.sqliteq import SqliteQueueDatabase
 from challenge import Challenge
 from project import Project
 from solution import Solution
-from utils import parse_iso8601_to_utc_naive
+from utils import assert_type, parse_iso8601_to_utc_naive
 
 # db = SqliteQueueDatabase(
 db = SqliteDatabase(
@@ -81,6 +81,8 @@ class SolutionModel(BaseModel):
 
 class Tracker:
     def __init__(self, project: Project):
+        assert_type(project, Project)
+
         db_name = os.path.join('db', f'{project.name.lower()}.sqlite3')
         db.init(db_name)
         # db.start()
@@ -94,6 +96,8 @@ class Tracker:
     # wallet
     # -------------------------
     def add_wallet(self, address: str) -> bool:
+        assert_type(address, str)
+
         if self.wallet_exists(address):
             return False
         else:
@@ -106,12 +110,16 @@ class Tracker:
     # enddef
 
     def wallet_exists(self, addresss: str) -> bool:
+        assert_type(addresss, str)
+
         return WalletModel.select().where(
             WalletModel.address == addresss
             ).exists()
     # enddef
 
     def get_wallets(self, num: Optional[int]) -> list[str]:
+        assert_type(num, int, allow_none=True)
+
         wallets = WalletModel.select()
         if num and num >= 0:
             wallets = wallets.limit(num)
@@ -124,6 +132,8 @@ class Tracker:
     # challenge
     # -------------------------
     def add_challenge(self, challenge: Challenge) -> bool:
+        assert_type(challenge, Challenge)
+
         if self.challenge_exists(challenge):
             return False
         else:
@@ -144,18 +154,25 @@ class Tracker:
     # enddef
 
     def get_challenge_model(self, challenge_id: str) -> Optional[ChallengeModel]:
+        assert_type(challenge_id, str)
+
         return ChallengeModel.select().where(
             ChallengeModel.challenge_id == challenge_id
             ).first()
     # enddef
 
     def challenge_exists(self, challenge: Challenge) -> bool:
+        assert_type(challenge, Challenge)
+
         return ChallengeModel.select().where(
             ChallengeModel.challenge_id == challenge.challenge_id
             ).exists()
     # enddef
 
     def _query_challenge_models(self, address: str, list__status: list[WorkStatus]) -> Iterable[ChallengeModel]:
+        assert_type(address, str)
+        assert_type(list__status, list, WorkStatus)
+
         ignore_challenge_id = (
             WorkModel
             .select(WorkModel.challenge_id)
@@ -179,6 +196,9 @@ class Tracker:
     # enddef
 
     def get_challenges(self, address: str, list__status: list[WorkStatus]) -> list[Challenge]:
+        assert_type(address, str)
+        assert_type(list__status, list, WorkStatus)
+
         list__challenge_models = self._query_challenge_models(address=address, list__status=list__status)
 
         list__challenge = []
@@ -190,6 +210,8 @@ class Tracker:
     # enddef
 
     def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
+        assert_type(address, str)
+
         cm = self._query_challenge_models(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Validated]).first()
 
         if cm is None:
@@ -203,18 +225,28 @@ class Tracker:
     # work
     # -------------------------
     def work_exists(self, address: str, challenge: Challenge) -> bool:
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
         return WorkModel.select().where(
             (WorkModel.address == address) &
             (WorkModel.challenge_id == challenge.challenge_id)
             ).exists()
 
     def add_work(self, address: str, challenge: Challenge):
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
         with db_lock:
             WorkModel.create(address=address, challenge_id=challenge.challenge_id, status=WorkStatus.Open.value)
         # endwith
     # enddef
 
     def update_work(self, address: str, challenge: Challenge, status: WorkStatus):
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+        assert_type(status, WorkStatus)
+
         with db_lock:
             (WorkModel
              .update(status=status.value)
@@ -227,6 +259,8 @@ class Tracker:
     # enddef
 
     def get_solving_challenge(self, address: str) -> Optional[Challenge]:
+        assert_type(address, str)
+
         work_solving = (
             WorkModel
             .select()
@@ -251,6 +285,10 @@ class Tracker:
     # solution
     # -------------------------
     def add_solution_found(self, address: str, challenge: Challenge, solution: Solution):
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+        assert_type(solution, Solution)
+
         with db_lock:
             SolutionModel.create(address=address, challenge_id=challenge.challenge_id, nonce_hex=solution.nonce_hex, hash_hex=solution.hash_hex, tries=solution.tries,
                                  status=SolutionStatus.Found.value)
@@ -258,6 +296,11 @@ class Tracker:
     # enddef
 
     def update_solution(self, address: str, challenge: Challenge, solution: Solution, status: SolutionStatus):
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+        assert_type(solution, Solution)
+        assert_type(status, SolutionStatus)
+
         with db_lock:
             (SolutionModel
              .update(status=status.value)
@@ -271,6 +314,9 @@ class Tracker:
     # enddef
 
     def get_found_solution(self, address: str, challenge: Challenge) -> Optional[Solution]:
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
         sm = (SolutionModel
               .select()
               .where(
