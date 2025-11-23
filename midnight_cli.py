@@ -263,7 +263,7 @@ class MidnightCLI(BaseMiner):
             if now - last_maintain_cache > 60 * 20:
                 list__challenge = []
                 for address in list__address:
-                    list__challenge += self.tracker.get_open_challenges(address)
+                    list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open])
                 # endfor
                 self.miner.maintain_cache(list__challenge)
 
