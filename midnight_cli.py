@@ -260,7 +260,7 @@ class MidnightCLI(BaseMiner):
                 last_show_info = now
             # endif
 
-            if now - last_maintain_cache > 60 * 60:
+            if now - last_maintain_cache > 60 * 20:
                 list__challenge = []
                 for address in list__address:
                     list__challenge += self.tracker.get_open_challenges(address)
