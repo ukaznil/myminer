@@ -219,21 +219,21 @@ class MidnightCLI(BaseMiner):
                     ).start()
             # enddef
 
-            def show_cache_status():
-                cache_info = self.miner.rom_cache_info()
-                size_in_gib = sum(cache_info.values()) / (1024 ** 3)
+            def show_rom_cache_status():
+                rom_cache_info = self.miner.rom_cache_info()
+                size_in_gib = sum(rom_cache_info.values()) / (1024 ** 3)
                 msg = [
-                    '=== [C]ached ROM Status ===',
-                    f'num: {len(cache_info)}',
+                    '=== [R]OM Cache Status ===',
+                    f'num: {len(rom_cache_info)}',
                     f'size: {size_in_gib:,.2f} GiB',
                     ]
 
                 self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
             # enddef
 
-            def async_show_cache_status():
+            def async_show_rom_cache_status():
                 threading.Thread(
-                    target=show_cache_status,
+                    target=show_rom_cache_status,
                     daemon=True,
                     ).start()
             # enddef
@@ -278,7 +278,7 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Memory)
 
                 if release_cache:
-                    show_cache_status()
+                    show_rom_cache_status()
 
                     self.miner.release_rom_cache()
 
@@ -315,7 +315,7 @@ class MidnightCLI(BaseMiner):
             threads = []  # type: list[threading.Thread]
             def input_loop():
                 for line in sys.stdin:
-                    cmd = line.strip()
+                    cmd = line.strip().lower()
 
                     if cmd == 'w':
                         async_show_worklist()
@@ -323,8 +323,8 @@ class MidnightCLI(BaseMiner):
                         async_show_hashrate()
                     elif cmd == 's':
                         async_show_statistics()
-                    elif cmd == 'c':
-                        async_show_cache_status()
+                    elif cmd == 'r':
+                        async_show_rom_cache_status()
                     elif cmd == 't':
                         async_check_threads()
                     elif cmd == 'q':
@@ -332,7 +332,7 @@ class MidnightCLI(BaseMiner):
                         self.miner.stop()
                         break
                     else:
-                        print(f"Invalid command: '{cmd}'. Available: ([w]orklist, [h]ashrate, [s]tatistics, [c]ached-ROM, [t]hreads, [q]uit)")
+                        print(f"Invalid command: '{cmd}'. Available: ([W]orklist, [H]ashrate, [S]tatistics, [R]OM-cache, [T]hreads, [Q]uit)")
                     # endif
                 # endfor
             # enddef
@@ -369,7 +369,7 @@ class MidnightCLI(BaseMiner):
                     async_show_worklist()
                     async_show_hashrate()
                     async_show_statistics()
-                    async_show_cache_status()
+                    async_show_rom_cache_status()
 
                     last_show_info = now
                 # endif
