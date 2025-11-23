@@ -50,8 +50,8 @@ class ChallengeModel(BaseModel):
 
 class WorkStatus(Enum):
     Open = auto()
-    Working = auto()
-    Solved = auto()
+    Solving = auto()
+    Validated = auto()
     Invalid = auto()
 
 
@@ -66,7 +66,7 @@ class WorkModel(BaseModel):
 
 class SolutionStatus(Enum):
     Found = auto()
-    Verified = auto()
+    Validated = auto()
     Invalid = auto()
 
 
@@ -143,6 +143,12 @@ class Tracker:
         # endif
     # enddef
 
+    def get_challenge_model(self, challenge_id: str) -> Optional[ChallengeModel]:
+        return ChallengeModel.select().where(
+            ChallengeModel.challenge_id == challenge_id
+            ).first()
+    # enddef
+
     def challenge_exists(self, challenge: Challenge) -> bool:
         return ChallengeModel.select().where(
             ChallengeModel.challenge_id == challenge.challenge_id
@@ -184,7 +190,7 @@ class Tracker:
     # enddef
 
     def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
-        cm = self._query_challenge_models(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Solved]).first()
+        cm = self._query_challenge_models(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Validated]).first()
 
         if cm is None:
             return None
@@ -220,18 +226,25 @@ class Tracker:
         # endwith
     # enddef
 
-    def get_num_work(self, address: str, status: WorkStatus) -> int:
-        num = (
+    def get_solving_work(self, address: str) -> Optional[Challenge]:
+        work_solving = (
             WorkModel
             .select()
             .where(
                 (WorkModel.address == address) &
-                (WorkModel.status == status.value)
+                (WorkModel.status == WorkStatus.Solving.value)
                 )
-            .count()
-        )
+            .first()
+        )  # type: WorkModel
 
-        return num
+        if work_solving:
+            challenge_id = work_solving.challenge_id
+            cm = self.get_challenge_model(challenge_id=challenge_id)
+
+            return Challenge.from_challenge_model(challenge_model=cm)
+        else:
+            return None
+        # endif
     # enddef
 
     # -------------------------
