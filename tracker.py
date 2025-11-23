@@ -140,7 +140,7 @@ class Tracker:
             with db_lock:
                 ChallengeModel.create(challenge_id=challenge.challenge_id,
                                       day=challenge.day,
-                                      challenge_number=challenge.challange_number,
+                                      challenge_number=challenge.challenge_number,
                                       difficulty=challenge.difficulty,
                                       no_pre_mine=challenge.no_pre_mine,
                                       no_pre_mine_hour=challenge.no_pre_mine_hour,

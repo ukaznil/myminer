@@ -139,7 +139,7 @@ class MidnightCLI(BaseMiner):
                             mark = ' '
                         # endif
 
-                        msg.append(f'- [{mark}] day/ch#={challenge.day}/{challenge.challange_number}, id={challenge.challenge_id}')
+                        msg.append(f'- [{mark}] day/ch#={challenge.day}/{challenge.challenge_number}, id={challenge.challenge_id}')
                     # endfor
                 else:
                     msg.append(f'- None')
