@@ -32,6 +32,9 @@ class SolverInfo:
     # enddef
 
 
+RANDOM_BUFFER_SIZE = 65_536
+
+
 class AshMaizeSolver:
     def __init__(self, addr2nickname: dict[str, str], logger: Logger):
         self.addr2nickname = addr2nickname
@@ -40,7 +43,7 @@ class AshMaizeSolver:
         self.dict__address__workinginfo = defaultdict(SolverInfo)  # type: dict[str, SolverInfo]
 
         # generate nonces
-        self.random_buffer = bytearray(8192)
+        self.random_buffer = bytearray(RANDOM_BUFFER_SIZE)
         self.random_buffer_pos = len(self.random_buffer)
         self.preimage_base_cache = dict()
 
@@ -206,7 +209,7 @@ class AshMaizeSolver:
         # return random.getrandbits(64)
 
         if self.random_buffer_pos >= len(self.random_buffer):
-            self.random_buffer = bytearray(secrets.token_bytes(8192))
+            self.random_buffer = bytearray(secrets.token_bytes(RANDOM_BUFFER_SIZE))
             self.random_buffer_pos = 0
         # endif
 
