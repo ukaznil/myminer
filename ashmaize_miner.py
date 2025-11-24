@@ -191,7 +191,7 @@ class AshMaizeMiner:
             f'address: {address}',
             f'challenge: {challenge.challenge_id}',
             f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in workinfo.batch_size_search.items()])}',
-            f'-> best batch-size = {best_batch_size}'
+            f'-> best batch-size = {best_batch_size:,}'
             ]
         self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search)
 
