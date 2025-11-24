@@ -20,7 +20,7 @@ class LogType(Enum):
     Solution_Submission_Error = ('solution_submission_error')
     Fetch_New_Challenge = ('fetch_new_challenge')
     Fetch_New_Challenge_Error = ('fetch_new_challenge_error')
-    Cache_Status = ('cache_status')
+    Rom_Cache_Status = ('rom_cache_status')
     Memory = ('memory')
     Thread = ('thread')
     Batch_Size_Search = ('batch_size_search')
