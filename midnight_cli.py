@@ -640,7 +640,7 @@ class MidnightCLI(BaseMiner):
 
         challenge = challenge_resp.get('challenge', {})
         if challenge:
-            challenge = Challenge(challenge)
+            challenge = Challenge.from_dict(challenge)
 
             # save
             if self.tracker.add_challenge(challenge):

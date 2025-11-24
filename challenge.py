@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from datetime import datetime, timedelta
 
 from utils import parse_iso8601_to_utc_naive
@@ -13,21 +13,14 @@ class Challenge:
     no_pre_mine: str  # 長い hex 文字列
     no_pre_mine_hour: str  # 10 桁くらいの数字文字列
     latest_submission: str  # ISO8601, "2025-10-30T23:59:59Z" など
+    latest_submission_dt: datetime = field(init=False, repr=False)
 
-    def __init__(self, ch: dict):
-        self.challenge_id = ch['challenge_id']
-        self.day = ch.get('day')
-        self.challenge_number = ch.get("challenge_number")
-        self.difficulty = ch['difficulty']
-        self.no_pre_mine = ch['no_pre_mine']
-        self.no_pre_mine_hour = ch['no_pre_mine_hour']
-        self.latest_submission = ch['latest_submission']
+    def __post_init__(self):
+        self.latest_submission_dt = parse_iso8601_to_utc_naive(self.latest_submission)
     # enddef
 
     def is_valid(self) -> bool:
-        latest_submission_dt = parse_iso8601_to_utc_naive(self.latest_submission)
-
-        return self.is_valid_dt(latest_submission_dt)
+        return self.is_valid_dt(self.latest_submission_dt)
     # enddef
 
     @staticmethod
@@ -35,17 +28,25 @@ class Challenge:
         return latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10)
     # enddef
 
-    @staticmethod
-    def from_challenge_model(challenge_model) -> 'Challenge':
-        return Challenge({
-            'challenge_id': challenge_model.challenge_id,
-            'day': challenge_model.day,
-            'challenge_number': challenge_model.challenge_number,
-            'difficulty': challenge_model.difficulty,
-            'no_pre_mine': challenge_model.no_pre_mine,
-            'no_pre_mine_hour': challenge_model.no_pre_mine_hour,
-            'latest_submission': challenge_model.latest_submission,
-            })
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Challenge':
+        valid_names = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in valid_names}
+
+        return cls(**filtered)
+    # enddef
+
+    @classmethod
+    def from_challenge_model(cls, challenge_model) -> 'Challenge':
+        return cls(
+            challenge_id=challenge_model.challenge_id,
+            day=challenge_model.day,
+            challenge_number=challenge_model.challenge_number,
+            difficulty=challenge_model.difficulty,
+            no_pre_mine=challenge_model.no_pre_mine,
+            no_pre_mine_hour=challenge_model.no_pre_mine_hour,
+            latest_submission=challenge_model.latest_submission,
+            )
     # enddef
 
     def __repr__(self) -> str:

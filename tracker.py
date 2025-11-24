@@ -444,7 +444,9 @@ class Tracker:
         )
 
         with db_lock:
-            q1.execute()
-            q2.execute()
+            with self.db.atomic():
+                q1.execute()
+                q2.execute()
+            # endwith
         # endwith
     # enddef

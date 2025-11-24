@@ -1,4 +1,4 @@
-import random
+import secrets
 import threading
 import time
 from typing import Optional
@@ -75,8 +75,8 @@ class _RomManager:
 
 class AshMaizeMiner:
     def __init__(self, logger: Logger):
-        # self.random_buffer = bytearray(8192)
-        # self.random_buffer_pos = len(self.random_buffer)
+        self.random_buffer = bytearray(8192)
+        self.random_buffer_pos = len(self.random_buffer)
 
         self.logger = logger
 
@@ -105,18 +105,18 @@ class AshMaizeMiner:
     # @measure_time
     def get_fast_nonce(self) -> int:
         # return secrets.randbits(64)
-        return random.getrandbits(64)
+        # return random.getrandbits(64)
 
-        # if self.random_buffer_pos >= len(self.random_buffer):
-        #     self.random_buffer = bytearray(secrets.token_bytes(8192))
-        #     self.random_buffer_pos = 0
-        # # endif
-        #
-        # nonce_bytes = self.random_buffer[self.random_buffer_pos:self.random_buffer_pos + 8]
-        # self.random_buffer_pos += 8
-        # nonce = int.from_bytes(nonce_bytes, 'big')
-        #
-        # return nonce
+        if self.random_buffer_pos >= len(self.random_buffer):
+            self.random_buffer = bytearray(secrets.token_bytes(8192))
+            self.random_buffer_pos = 0
+        # endif
+
+        nonce_bytes = self.random_buffer[self.random_buffer_pos:self.random_buffer_pos + 8]
+        self.random_buffer_pos += 8
+        nonce = int.from_bytes(nonce_bytes, 'big')
+
+        return nonce
     # enddef
 
     @measure_time
@@ -166,35 +166,30 @@ class AshMaizeMiner:
         assert_type(address, str)
 
         rom = _RomManager.get_rom(challenge.no_pre_mine)
+        difficulty_value = int(challenge.difficulty[:8], 16)
 
         NUM_BATCHES = 10_000
         preimage_base = self.build_preimage(address=address, challenge=challenge)
         time_start = time.time()
-        last_display = 0
         tries = 0
         while self.is_running() and challenge.is_valid():
-            nonces = [self.get_fast_nonce() for _ in range(NUM_BATCHES)]
-            preimages = [f'{nonce:016x}' + preimage_base for nonce in nonces]
+            preimages = [f'{self.get_fast_nonce():016x}' + preimage_base for _ in range(NUM_BATCHES)]
             list__hash_hex = rom.hash_batch(preimages)
 
-            for idx_nonce, hash_hex in enumerate(list__hash_hex):
-                if self.meets_difficulty(hash_hex=hash_hex, difficulty_hex=challenge.difficulty):
-                    nonce = nonces[idx_nonce]
-                    nonce_hex = f'{nonce:016x}'
+            for idx_hash_hex, hash_hex in enumerate(list__hash_hex):
+                if self.meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
+                    nonce_hex = preimages[idx_hash_hex][:16]
 
-                    return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=tries + idx_nonce + 1)
+                    return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=tries + idx_hash_hex + 1)
                 # endif
             # endfor
 
             tries += NUM_BATCHES
             now = time.time()
-            if now - last_display > 60 * 5 or tries % 100_000 == 0:
-                self._hashrate[address] = tries / (now - time_start)
-                self._tries[address] = tries
-                self._challenge[address] = challenge
 
-                last_display = now
-            # endif
+            self._hashrate[address] = tries / (now - time_start)
+            self._tries[address] = tries
+            self._challenge[address] = challenge
 
             time.sleep(0.5)
         # endwhile
@@ -228,12 +223,11 @@ class AshMaizeMiner:
     #     (hash_prefix & ~difficulty_mask) == 0
     # なら条件を満たす  [oai_citation:3‡45047878.fs1.hubspotusercontent-na1.net](https://45047878.fs1.hubspotusercontent-na1.net/hubfs/45047878/Midnight%20-%20Whitepaper%20treatment%20for%20Scavenger%20Mine%20API%20V3.pdf)
     @staticmethod
-    def meets_difficulty(hash_hex: str, difficulty_hex: str) -> bool:
+    def meets_difficulty(hash_hex: str, difficulty_value: int) -> bool:
         assert_type(hash_hex, str)
-        assert_type(difficulty_hex, str)
+        assert_type(difficulty_value, int)
 
         hash_value = int(hash_hex[:8], 16)
-        difficulty_value = int(difficulty_hex[:8], 16)
 
         return (hash_value | difficulty_value) == difficulty_value
     # enddef
