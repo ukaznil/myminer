@@ -475,37 +475,32 @@ class MidNightApp(BaseMiner):
             return
         # endif
 
-        d = dict()
-        for address in self.list__address:
-            num_todo = len(self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Found, SolutionStatus.Invalid]))
-            d[address] = num_todo
-        # endfor
-
-        list__address_run = [addr for addr, num in sorted(d.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
+        counts = {addr: len(self.tracker.get_challenges(address=addr, list__status=[SolutionStatus.Found, SolutionStatus.Invalid]))
+                  for addr in self.list__address}
+        top_addrs = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
 
         msg = [
             f'=== Switch Addresses to Run (<= {num_threads}) ===',
             ]
-        flag_show = False
+        changed = False
+
         for addr in self.list__address:
-            nickname = f'[{self.addr2nickname[addr]}]'
             ev = self.run_events[addr]
-            if addr in list__address_run:
-                if not ev.is_set():
-                    msg.append(f'{nickname} -> run')
-                    ev.set()
-                    flag_show = True
-                # endif
-            else:
-                if ev.is_set():
-                    msg.append(f'{nickname} -> stop')
-                    ev.clear()
-                    flag_show = True
-                # endif
+            should_run = addr in top_addrs
+
+            if should_run and not ev.is_set():
+                ev.set()
+                changed = True
+            elif not should_run and ev.is_set():
+                ev.clear()
+                changed = True
             # endif
+
+            nickname = f'[{self.addr2nickname[addr]}]'
+            msg.append(f'{nickname}: {"run" if should_run else "stop"}')
         # endfor
 
-        if flag_show:
+        if changed:
             self.logger.log('\n'.join(msg), log_type=LogType.Switch_To_Run)
         # endif
     # enddef
