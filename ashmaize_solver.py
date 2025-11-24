@@ -82,7 +82,7 @@ class AshMaizeSolver:
 
         try:
             list__batch_size = [10, 100, 1_000, 10_000]
-            
+
             # batch_size search
             for batch_size in list__batch_size:
                 solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=batch_size, is_search=True)
@@ -94,7 +94,7 @@ class AshMaizeSolver:
 
             # find the best_batch_size
             best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get, default=None)
-            workinfo.best_batch_size = batch_size
+            workinfo.best_batch_size = best_batch_size
 
             msg = [
                 f'=== {nickname} Batch-size Search ===',
@@ -116,7 +116,7 @@ class AshMaizeSolver:
 
                     break
                 # endif
-                
+
                 solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
 
                 if solution:
