@@ -138,7 +138,8 @@ class MidnightCLI(BaseMiner):
                     msg.append(f'[{self.addrbook[address]}] {address}')
 
                     list__challenge = self.tracker.get_challenges(address=address, list__status=[ss for ss in SolutionStatus if ss != SolutionStatus.Validated])
-                    solving_info = self.miner.dict__address__workinginfo[address].solving_info
+                    working_info = self.miner.dict__address__workinginfo[address]
+                    solving_info = working_info.solving_info
                     if solving_info:
                         challenge_solving = solving_info.challenge
                     else:
@@ -154,6 +155,7 @@ class MidnightCLI(BaseMiner):
                                 mark = '*'
                                 msg_info.append(f'hashrate={safefstr(solving_info.hashrate, ",.0f")} H/s')
                                 msg_info.append(f'tries={solving_info.tries:,}')
+                                msg_info.append(f'batch_size={working_info.best_batch_size:,}')
                             else:
                                 mark = ' '
                             # endif
