@@ -24,6 +24,7 @@ class LogType(Enum):
     Memory = ('memory')
     Thread = ('thread')
     Batch_Size_Search = ('batch_size_search')
+    Challenge_Expire = ('challenge_expire')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)

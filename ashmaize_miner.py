@@ -184,7 +184,7 @@ class AshMaizeMiner:
         # endfor
 
         # find the best_batch_size
-        best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get)
+        best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get, default=None)
         workinfo.best_batch_size = batch_size
 
         msg = [
@@ -206,6 +206,16 @@ class AshMaizeMiner:
                 return solution
             # endif
 
+            if not challenge.is_valid():
+                self.logger.log('\n'.join([
+                    f'=== Challenge Expire ===',
+                    f'address: {address}',
+                    f'challenge: {challenge.challenge_id}',
+                    ]), log_type=LogType.Challenge_Expire, sufix=address)
+
+                break
+            # endif
+
             time.sleep(0.5)
         # endwhile
 
@@ -219,6 +229,10 @@ class AshMaizeMiner:
         assert_type(difficulty_value, int)
         assert_type(batch_size, int)
         assert_type(is_search, bool)
+
+        if not challenge.is_valid():
+            return None
+        # endif
 
         if (address, challenge.challenge_id) in self.preimage_base_cache.keys():
             preimage_base = self.preimage_base_cache[(address, challenge.challenge_id)]
