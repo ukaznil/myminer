@@ -33,15 +33,18 @@ class SolverInfo:
 
 
 class AshMaizeSolver:
-    def __init__(self, logger: Logger):
-        self.random_buffer = bytearray(8192)
-        self.random_buffer_pos = len(self.random_buffer)
-
+    def __init__(self, addr2nickname: dict[str, str], logger: Logger):
+        self.addr2nickname = addr2nickname
         self.logger = logger
 
         self.dict__address__workinginfo = defaultdict(SolverInfo)  # type: dict[str, SolverInfo]
+
+        # generate nonces
+        self.random_buffer = bytearray(8192)
+        self.random_buffer_pos = len(self.random_buffer)
         self.preimage_base_cache = dict()
 
+        # event handling
         self._stop_event = threading.Event()
     # enddef
 
@@ -70,6 +73,8 @@ class AshMaizeSolver:
         assert_type(challenge, Challenge)
         assert_type(address, str)
 
+        nickname = f'[{self.addr2nickname[address]}]'
+
         rom = AshMaizeROMManager.get_rom(challenge.no_pre_mine)
         difficulty_value = int(challenge.difficulty[:8], 16)
         workinfo = self.dict__address__workinginfo[address]
@@ -93,13 +98,13 @@ class AshMaizeSolver:
         workinfo.best_batch_size = batch_size
 
         msg = [
-            '=== Batch-size Search ===',
+            f'=== {nickname} Batch-size Search ===',
             f'address: {address}',
             f'challenge: {challenge.challenge_id}',
             f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in workinfo.batch_size_search.items()])}',
             f'-> best batch-size = {best_batch_size:,}'
             ]
-        self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search)
+        self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
 
         # mine-loop with the best batch_size
         while self.is_running():
@@ -113,10 +118,10 @@ class AshMaizeSolver:
 
             if not challenge.is_valid():
                 self.logger.log('\n'.join([
-                    f'=== Challenge Expire ===',
+                    f'=== {nickname} Challenge Expire ===',
                     f'address: {address}',
                     f'challenge: {challenge.challenge_id}',
-                    ]), log_type=LogType.Challenge_Expire, sufix=address)
+                    ]), log_type=LogType.Challenge_Expire, sufix=nickname)
 
                 break
             # endif
