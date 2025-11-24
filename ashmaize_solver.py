@@ -144,9 +144,9 @@ class AshMaizeSolver:
             return None
         # endif
 
-        if (address, challenge.challenge_id) in self.preimage_base_cache.keys():
-            preimage_base = self.preimage_base_cache[(address, challenge.challenge_id)]
-        else:
+        key_cache = (address, challenge.challenge_id)
+        preimage_base = self.preimage_base_cache.get(key_cache)
+        if preimage_base is None:
             preimage_base = (
                     address
                     + challenge.challenge_id
@@ -155,15 +155,19 @@ class AshMaizeSolver:
                     + challenge.latest_submission
                     + challenge.no_pre_mine_hour
             )
-            self.preimage_base_cache[(address, challenge.challenge_id)] = preimage_base
+            self.preimage_base_cache[key_cache] = preimage_base
         # endif
 
         time_start = time.time()
 
-        preimages = [f'{self.get_fast_nonce():016x}' + preimage_base for _ in range(batch_size)]
+        # bind functions to local
+        get_fast_nonce = self.get_fast_nonce
+        meets_difficulty = self.meets_difficulty
+
+        preimages = [f'{get_fast_nonce():016x}' + preimage_base for _ in range(batch_size)]
         list__hash_hex = rom.hash_batch(preimages)
         for idx_hash_hex, hash_hex in enumerate(list__hash_hex):
-            if self.meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
+            if meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
                 nonce_hex = preimages[idx_hash_hex][:16]
 
                 return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=0)
