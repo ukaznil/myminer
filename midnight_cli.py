@@ -6,7 +6,8 @@ from typing import *
 
 import psutil
 
-from ashmaize_miner import AshMaizeMiner
+from ashmaize_rom_manager import AshMaizeROMManager
+from ashmaize_solver import AshMaizeSolver
 from base_miner import BaseMiner
 from challenge import Challenge
 from logger import LogType, Logger, measure_time
@@ -95,7 +96,7 @@ class MidnightCLI(BaseMiner):
 
         self.base_url = self.project.base_url
         self.tracker = Tracker(project=self.project, logger=self.logger)
-        self.miner = AshMaizeMiner(logger=self.logger)
+        self.miner = AshMaizeSolver(logger=self.logger)
 
         self.addrbook = {}
         self.tracker.get_wallets(None)
@@ -193,7 +194,7 @@ class MidnightCLI(BaseMiner):
             # enddef
 
             def show_rom_cache_status():
-                rom_cache_info = self.miner.rom_cache_info()
+                rom_cache_info = AshMaizeROMManager.status()
                 size_in_gib = sum(rom_cache_info.values()) / (1024 ** 3)
                 msg = [
                     '=== [R]OM Cache Status ===',
@@ -210,7 +211,7 @@ class MidnightCLI(BaseMiner):
                     list__challenge += self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
                 # endfor
 
-                self.miner.maintain_rom_cache(list__challenge)
+                AshMaizeROMManager.maintain_rom_cache(list__challenge)
             # enddef
 
             def check_memory():
@@ -226,7 +227,7 @@ class MidnightCLI(BaseMiner):
                         ]
                 # enddef
 
-                rom_cache = self.miner.rom_cache_info()
+                rom_cache = AshMaizeROMManager.status()
                 memory_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
 
                 vm = psutil.virtual_memory()
@@ -239,7 +240,7 @@ class MidnightCLI(BaseMiner):
                 if release_cache:
                     show_rom_cache_status()
 
-                    self.miner.release_rom_cache()
+                    AshMaizeROMManager.clear_all()
 
                     self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory)
                 # endif
@@ -618,7 +619,7 @@ class MidnightCLI(BaseMiner):
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
-            solution = self.miner.mine(address=address, challenge=challenge)
+            solution = self.miner.solve(address=address, challenge=challenge)
             if solution is None:
                 return
             # endif
