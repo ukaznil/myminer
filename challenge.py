@@ -25,7 +25,7 @@ class Challenge:
 
     @staticmethod
     def is_valid_dt(latest_submission_dt: datetime) -> bool:
-        return latest_submission_dt >= datetime.utcnow() + timedelta(seconds=10)
+        return latest_submission_dt >= datetime.utcnow() + timedelta(seconds=60)
     # enddef
 
     @classmethod
