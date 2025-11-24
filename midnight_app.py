@@ -29,7 +29,7 @@ class MidNightApp(BaseMiner):
         self.addr2nickname = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
 
         # pause
-        self.run_events = dict()  # type: dict[str, threading.Event]
+        self.address_active_events = dict()  # type: dict[str, threading.Event]
 
         # solver
         self.solver = AshMaizeSolver(addr2nickname=self.addr2nickname, logger=self.logger)
@@ -85,7 +85,7 @@ class MidNightApp(BaseMiner):
                 else:
                     run_event.set()  # run
                 # endif
-                self.run_events[address] = run_event
+                self.address_active_events[address] = run_event
 
                 threads.append(threading.Thread(
                     target=self.mine_loop,
@@ -450,7 +450,7 @@ class MidNightApp(BaseMiner):
 
     @measure_time
     def pause_solver(self, address: str):
-        ev = self.run_events.get(address)
+        ev = self.address_active_events.get(address)
         if ev is not None:
             ev.clear()
         # endif
@@ -458,7 +458,7 @@ class MidNightApp(BaseMiner):
 
     @measure_time
     def resume_solver(self, address: str):
-        ev = self.run_events.get(address)
+        ev = self.address_active_events.get(address)
         if ev is not None:
             ev.set()
         # endif
@@ -470,9 +470,8 @@ class MidNightApp(BaseMiner):
             return
         # endif
 
-        counts = {addr: len(self.tracker.get_challenges(address=addr, list__status=[SolutionStatus.Found, SolutionStatus.Invalid]))
-                  for addr in self.list__address}
-        top_addrs = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
+        counts = {addr: len(self.tracker.get_challenges(address=addr, list__status=[SolutionStatus.Found, SolutionStatus.Invalid])) for addr in self.list__address}
+        list_active_address = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
 
         msg = [
             f'=== Active Addresses (<= {num_threads}) ===',
@@ -480,19 +479,19 @@ class MidNightApp(BaseMiner):
         changed = False
 
         for addr in self.list__address:
-            ev = self.run_events[addr]
-            should_run = addr in top_addrs
+            ev = self.address_active_events[addr]
+            is_active = addr in list_active_address
 
-            if should_run and not ev.is_set():
+            if is_active and not ev.is_set():
                 ev.set()
                 changed = True
-            elif not should_run and ev.is_set():
+            elif not is_active and ev.is_set():
                 ev.clear()
                 changed = True
             # endif
 
             nickname = f'[{self.addr2nickname[addr]}]'
-            msg.append(f'{nickname}: {"*" if should_run else ""}')
+            msg.append(f'{nickname}: {"*active*" if is_active else ""}')
         # endfor
 
         if changed:
@@ -505,9 +504,9 @@ class MidNightApp(BaseMiner):
         assert_type(address, str)
         assert_type(num_threads, int, allow_none=True)
 
-        run_event = self.run_events[address]
+        address_active_event = self.address_active_events[address]
         while self.solver.is_running():
-            run_event.wait()  # pass when 'set'; blocked when 'clear'
+            address_active_event.wait()  # run when 'set'; stop when 'clear'
 
             challenge = self.tracker.get_oldest_unsolved_challenge(address)
 
