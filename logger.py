@@ -25,7 +25,7 @@ class LogType(Enum):
     Threading_Status = ('threading_status')
     Batch_Size_Search = ('batch_size_search')
     Challenge_Expire = ('challenge_expire')
-    Switch_To_Run = ('switch_to_run')
+    Active_Addresses = ('active_addresses')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)

@@ -89,31 +89,25 @@ class MidNightApp(BaseMiner):
 
                 threads.append(threading.Thread(
                     target=self.mine_loop,
-                    args=(address,),
+                    args=(address, num_threads),
                     daemon=True,
                     ))
             # endfor
 
             # start mining !!
+            self.set_active_addresses(num_threads=num_threads)
             self.solver.start()
             for thread in threads:
                 thread.start()
             # endfor
 
             # interactive commands
-            last_switch_address = 0
             last_retrieve_a_new_challenge = 0
             last_show_info = 0
             last_maintain_cache = time.time()
             last_check_memory = 0
             while self.solver.is_running():
                 now = time.time()
-
-                if now - last_switch_address > 10:
-                    self.allocate_alive_address(num_threads=num_threads)
-
-                    last_switch_address = now
-                # endif
 
                 if now - last_retrieve_a_new_challenge > 60 * 2:
                     async_run_func(self.retrieve_new_challenge)
@@ -471,7 +465,7 @@ class MidNightApp(BaseMiner):
     # enddef
 
     @measure_time
-    def allocate_alive_address(self, num_threads: Optional[int]):
+    def set_active_addresses(self, num_threads: Optional[int]):
         if num_threads is None:
             return
         # endif
@@ -481,7 +475,7 @@ class MidNightApp(BaseMiner):
         top_addrs = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
 
         msg = [
-            f'=== Switch Addresses to Run (<= {num_threads}) ===',
+            f'=== Active Addresses (<= {num_threads}) ===',
             ]
         changed = False
 
@@ -498,17 +492,18 @@ class MidNightApp(BaseMiner):
             # endif
 
             nickname = f'[{self.addr2nickname[addr]}]'
-            msg.append(f'{nickname}: {"run" if should_run else "stop"}')
+            msg.append(f'{nickname}: {"*" if should_run else ""}')
         # endfor
 
         if changed:
-            self.logger.log('\n'.join(msg), log_type=LogType.Switch_To_Run)
+            self.logger.log('\n'.join(msg), log_type=LogType.Active_Addresses)
         # endif
     # enddef
 
     @measure_time
-    def mine_loop(self, address: str):
+    def mine_loop(self, address: str, num_threads: Optional[int]):
         assert_type(address, str)
+        assert_type(num_threads, int, allow_none=True)
 
         run_event = self.run_events[address]
         while self.solver.is_running():
@@ -520,6 +515,7 @@ class MidNightApp(BaseMiner):
                 time.sleep(60)
             else:
                 self.solve_challenge(address=address, challenge=challenge)
+                self.set_active_addresses(num_threads=num_threads)
             # endif
 
             time.sleep(0.5)
