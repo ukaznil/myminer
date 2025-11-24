@@ -81,7 +81,7 @@ class AshMaizeSolver:
         workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None)
 
         try:
-            list__batch_size = [10, 100, 1_000, 10_000]
+            list__batch_size = [100, 1_000, 10_000]
 
             # batch_size search
             for batch_size in list__batch_size:
