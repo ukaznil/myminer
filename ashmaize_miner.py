@@ -170,7 +170,7 @@ class AshMaizeMiner:
         workinfo = self.dict__address__workinginfo[address]
         workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None)
 
-        list__batch_size = [10, 100, 1_000, 10_000, 100_000]
+        list__batch_size = [10, 100, 1_000, 10_000]
 
         # batch_size search
         for batch_size in list__batch_size:
