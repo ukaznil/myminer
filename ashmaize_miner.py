@@ -294,37 +294,3 @@ class AshMaizeMiner:
 
         return (hash_value | difficulty_value) == difficulty_value
     # enddef
-
-
-def demo_mine():
-    """
-    テスト用：固定値の challenge でマイニングしてみるデモ。
-    実際には Defensio / Midnight API から challenge を取得して
-    parse_challenge_from_api_json() に渡してください。
-    """
-    # ここはダミー。実戦では API から取る
-    challenge = Challenge({
-        'challenge_id': "**D21C10",
-        'difficulty': "0000FFFF",
-        'no_pre_mine': "cddba7b592e3133393c16194fac7431abf2f5485ed711db282183c819e08ebaa",
-        'no_pre_mine_hour': "548571128",
-        'latest_submission': "2025-11-20T23:59:59Z",
-        })
-
-    address = "addr_test1qq4dl3nhr0axurgcrpun9xyp04pd2r2dwu5x7eeam98psv6dhxlde8ucclv2p46hm077ds4vzelf5565fg3ky794uhrq5up0he"
-
-    print('=== Challenge ===')
-    print(challenge)
-
-    print("Start mining with AshMaize...")
-    miner = AshMaizeMiner()
-    solution = miner.mine(
-        challenge=challenge,
-        address=address,
-        )
-    print("=== SOLUTION FOUND ===")
-    print(f'solution = {solution}')
-
-
-if __name__ == "__main__":
-    demo_mine()
