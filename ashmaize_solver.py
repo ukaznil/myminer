@@ -107,12 +107,6 @@ class AshMaizeSolver:
 
             # mine-loop with the best batch_size
             while self.is_running():
-                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
-
-                if solution:
-                    return solution
-                # endif
-
                 if not challenge.is_valid():
                     self.logger.log('\n'.join([
                         f'=== {nickname} Challenge Expire ===',
@@ -121,6 +115,12 @@ class AshMaizeSolver:
                         ]), log_type=LogType.Challenge_Expire, sufix=nickname)
 
                     break
+                # endif
+                
+                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
+
+                if solution:
+                    return solution
                 # endif
 
                 time.sleep(0.5)
