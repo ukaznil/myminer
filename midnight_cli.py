@@ -686,7 +686,7 @@ class MidnightCLI(BaseMiner):
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
             try:
-                solution = self.miner.mine(challenge=challenge, address=address)
+                solution = self.miner.mine(address=address, challenge=challenge)
                 if solution is None:
                     return
                 # endif

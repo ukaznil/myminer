@@ -23,6 +23,7 @@ class LogType(Enum):
     Cache_Status = ('cache_status')
     Memory = ('memory')
     Thread = ('thread')
+    Batch_Size_Search = ('batch_size_search')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)
