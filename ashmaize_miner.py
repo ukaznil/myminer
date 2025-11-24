@@ -168,6 +168,7 @@ class AshMaizeMiner:
         rom = _RomManager.get_rom(challenge.no_pre_mine)
         difficulty_value = int(challenge.difficulty[:8], 16)
         workinfo = self.dict__address__workinginfo[address]
+        workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None)
 
         list__batch_size = [10, 100, 1_000, 10_000, 100_000]
 
@@ -255,12 +256,8 @@ class AshMaizeMiner:
             workinfo.batch_size_search[batch_size] = hashrate
         else:
             solving_info = workinfo.solving_info
-            if solving_info:
-                solving_info.tries += batch_size
-                solving_info.hashrate = hashrate
-            else:
-                workinfo.solving_info = SolvingInfo(challenge=challenge, tries=batch_size, hashrate=hashrate)
-            # endif
+            solving_info.tries += batch_size
+            solving_info.hashrate = hashrate
         # endif
 
         return None

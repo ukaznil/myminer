@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Iterable, Optional
 
-from peewee import CompositeKey, DateTimeField, IntegerField, JOIN, Model, SqliteDatabase, TextField
+from peewee import DateTimeField, IntegerField, JOIN, Model, SqliteDatabase, TextField
 
 from challenge import Challenge
 from logger import Logger, measure_time
@@ -56,25 +56,6 @@ class ChallengeModel(BaseModel):
     # endclass
 
 
-class WorkStatus(Enum):
-    Open = auto()
-    Solving = auto()
-    Validated = auto()
-    Invalid = auto()
-
-
-class WorkModel(BaseModel):
-    address: str = TextField()
-    challenge_id: str = TextField()
-    status: WorkStatus = TextField(choices=[(s.value, s.name) for s in WorkStatus])
-
-    class Meta:
-        primary_key = CompositeKey('address', 'challenge_id')
-        indexes = (
-            (('address', 'status'), False),
-            )
-
-
 class SolutionStatus(Enum):
     Found = auto()
     Validated = auto()
@@ -108,36 +89,10 @@ class Tracker:
         db.init(db_name)
         # db.start()
         db.connect(reuse_if_open=True)
-        db.create_tables([WalletModel, ChallengeModel, WorkModel, SolutionModel])
+        db.create_tables([WalletModel, ChallengeModel, SolutionModel])
 
         self.db = db
         self.logger = logger
-
-        self._ensure_indexes()
-    # enddef
-
-    def _ensure_indexes(self):
-        # SolutionModel
-        self.db.execute_sql("""
-        CREATE INDEX IF NOT EXISTS idx_solution_address_challenge_nonce
-        ON solutionmodel (address, challenge_id, nonce_hex);
-        """)
-        self.db.execute_sql("""
-        CREATE INDEX IF NOT EXISTS idx_solution_address_challenge_status
-        ON solutionmodel (address, challenge_id, status);
-        """)
-
-        # WorkModel
-        self.db.execute_sql("""
-        CREATE INDEX IF NOT EXISTS idx_work_address_status
-        ON workmodel (address, status);
-        """)
-
-        # ChallengeModel
-        self.db.execute_sql("""
-        CREATE INDEX IF NOT EXISTS idx_challenge_latest_submission_dt
-        ON challengemodel (latest_submission_dt);
-        """)
     # enddef
 
     @measure_time
@@ -220,29 +175,27 @@ class Tracker:
     # enddef
 
     @measure_time
-    def _query_challenge_models(self, address: str, list__status: list[WorkStatus]) -> Iterable[ChallengeModel]:
+    def _query_challenge_models(self, address: str, list__status: list[SolutionStatus]) -> Iterable[ChallengeModel]:
         assert_type(address, str)
-        assert_type(list__status, list, WorkStatus)
+        assert_type(list__status, list, SolutionStatus)
 
-        allowed_status_values = [ws.value for ws in list__status]
-        WorkAlias = WorkModel.alias()
+        allowed_status_values = [ss.value for ss in list__status]
+        SolutionAlias = SolutionModel.alias()
 
         query = (
             ChallengeModel
             .select(ChallengeModel)
             .join(
-                WorkAlias,
+                SolutionAlias,
                 JOIN.LEFT_OUTER,
                 on=(
-                        (WorkAlias.challenge_id == ChallengeModel.challenge_id) &
-                        (WorkAlias.address == address)
+                        (SolutionAlias.challenge_id == ChallengeModel.challenge_id) &
+                        (SolutionAlias.address == address)
                 ),
                 )
             .where(
-                # Work が無い（まだ一度も着手していない）か、
-                (WorkAlias.challenge_id.is_null(True)) |
-                # or status が許可リストに入っている
-                (WorkAlias.status.in_(allowed_status_values))
+                (SolutionAlias.challenge_id.is_null(True)) |
+                (SolutionAlias.status.in_(allowed_status_values))
                 )
             .where(Challenge.is_valid_dt(ChallengeModel.latest_submission_dt))
             .order_by(ChallengeModel.latest_submission_dt.asc())
@@ -252,9 +205,9 @@ class Tracker:
     # enddef
 
     @measure_time
-    def get_challenges(self, address: str, list__status: list[WorkStatus]) -> list[Challenge]:
+    def get_challenges(self, address: str, list__status: list[SolutionStatus]) -> list[Challenge]:
         assert_type(address, str)
-        assert_type(list__status, list, WorkStatus)
+        assert_type(list__status, list, SolutionStatus)
 
         list__challenge_models = self._query_challenge_models(address=address, list__status=list__status)
 
@@ -270,81 +223,12 @@ class Tracker:
     def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
         assert_type(address, str)
 
-        cm = self._query_challenge_models(address=address, list__status=[status for status in WorkStatus if status != WorkStatus.Validated]).first()
+        cm = self._query_challenge_models(address=address, list__status=[ss for ss in SolutionStatus if ss != SolutionStatus.Validated]).first()
 
         if cm is None:
             return None
         else:
             return Challenge.from_challenge_model(cm)
-        # endif
-    # enddef
-
-    # -------------------------
-    # work
-    # -------------------------
-    @measure_time
-    def add_work(self, address: str, challenge: Challenge, status: WorkStatus) -> bool:
-        assert_type(address, str)
-        assert_type(challenge, Challenge)
-
-        q = (
-            WorkModel
-            .insert(
-                address=address,
-                challenge_id=challenge.challenge_id,
-                status=status.value,
-                )
-            .on_conflict_replace()
-        )
-
-        with db_lock:
-            inserted = q.execute()
-        # endwith
-
-        return bool(inserted)
-    # enddef
-
-    @measure_time
-    def update_work(self, address: str, challenge: Challenge, status: WorkStatus):
-        assert_type(address, str)
-        assert_type(challenge, Challenge)
-        assert_type(status, WorkStatus)
-
-        q = (
-            WorkModel
-            .update(status=status.value)
-            .where(
-                (WorkModel.address == address) &
-                (WorkModel.challenge_id == challenge.challenge_id)
-                )
-        )
-
-        with db_lock:
-            q.execute()
-        # endwith
-    # enddef
-
-    @measure_time
-    def get_solving_challenge(self, address: str) -> Optional[Challenge]:
-        assert_type(address, str)
-
-        work_solving = (
-            WorkModel
-            .select()
-            .where(
-                (WorkModel.address == address) &
-                (WorkModel.status == WorkStatus.Solving.value)
-                )
-            .first()
-        )  # type: WorkModel
-
-        if work_solving:
-            challenge_id = work_solving.challenge_id
-            cm = self.get_challenge_model(challenge_id=challenge_id)
-
-            return Challenge.from_challenge_model(challenge_model=cm)
-        else:
-            return None
         # endif
     # enddef
 
@@ -424,16 +308,7 @@ class Tracker:
         assert_type(challenge, Challenge)
         assert_type(validated, bool)
 
-        q1 = (
-            WorkModel
-            .update(status=(WorkStatus.Validated if validated else WorkStatus.Invalid).value)
-            .where(
-                (WorkModel.address == address) &
-                (WorkModel.challenge_id == challenge.challenge_id)
-                )
-        )
-
-        q2 = (
+        q = (
             SolutionModel
             .update(status=(SolutionStatus.Validated if validated else SolutionStatus.Invalid).value)
             .where(
@@ -444,9 +319,6 @@ class Tracker:
         )
 
         with db_lock:
-            with self.db.atomic():
-                q1.execute()
-                q2.execute()
-            # endwith
+            q.execute()
         # endwith
     # enddef

@@ -12,8 +12,8 @@ from challenge import Challenge
 from logger import LogType, Logger, measure_time
 from project import Project
 from solution import Solution
-from tracker import Tracker, WorkStatus
 from utils import assert_type, print_with_time, safefstr
+from tracker import SolutionStatus, Tracker
 
 
 class MidnightCLI(BaseMiner):
@@ -137,17 +137,28 @@ class MidnightCLI(BaseMiner):
                 for idx_addr, address in enumerate(list__address):
                     msg.append(f'[{self.addrbook[address]}] {address}')
 
-                    list__challenge = self.tracker.get_challenges(address=address, list__status=[ws for ws in WorkStatus if ws != WorkStatus.Validated])
-                    challenge_solving = self.tracker.get_solving_challenge(address=address)
+                    list__challenge = self.tracker.get_challenges(address=address, list__status=[ss for ss in SolutionStatus if ss != SolutionStatus.Validated])
+                    solving_info = self.miner.dict__address__workinginfo[address].solving_info
+                    if solving_info:
+                        challenge_solving = solving_info.challenge
+                    else:
+                        challenge_solving = None
+                    # endif
                     if len(list__challenge) > 0:
                         for challenge in list__challenge:
+                            msg_info = [
+                                f'challenge={challenge.challenge_id}',
+                                ]
+
                             if challenge_solving and challenge.challenge_id == challenge_solving.challenge_id:
                                 mark = '*'
+                                msg_info.append(f'hashrate={safefstr(solving_info.hashrate, ",.0f")} H/s')
+                                msg_info.append(f'tries={solving_info.tries:,}')
                             else:
                                 mark = ' '
                             # endif
 
-                            msg.append(f'- [{mark}] day/ch#={challenge.day}/{challenge.challenge_number}, id={challenge.challenge_id}')
+                            msg.append(f'- [{mark}] {", ".join(msg_info)}')
                         # endfor
                     else:
                         msg.append(f'- None')
@@ -241,7 +252,7 @@ class MidnightCLI(BaseMiner):
             def maintain_rom_cache():
                 list__challenge = []
                 for address in list__address:
-                    list__challenge += self.tracker.get_challenges(address=address, list__status=[WorkStatus.Open, WorkStatus.Invalid])
+                    list__challenge += self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
                 # endfor
 
                 self.miner.maintain_rom_cache(list__challenge)
@@ -685,16 +696,12 @@ class MidnightCLI(BaseMiner):
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
-            try:
-                solution = self.miner.mine(address=address, challenge=challenge)
-                if solution is None:
-                    return
-                # endif
+            solution = self.miner.mine(address=address, challenge=challenge)
+            if solution is None:
+                return
+            # endif
 
-                self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
-            finally:
-                self.tracker.update_work(address=address, challenge=challenge, status=WorkStatus.Open)
-            # endtry
+            self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
         # endif
 
         self.logger.log('\n'.join([
