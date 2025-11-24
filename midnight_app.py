@@ -27,6 +27,9 @@ class MidNightApp(BaseMiner):
         self.list__address = self.tracker.get_wallets(None)  # todo: 引数をなくしたい
         self.addr2nickname = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
 
+        # pause
+        self.run_events = dict()  # type: dict[str, threading.Event]
+
         # solver
         self.solver = AshMaizeSolver(addr2nickname=self.addr2nickname, logger=self.logger)
     # enddef
@@ -74,12 +77,15 @@ class MidNightApp(BaseMiner):
     def handle_mine(self, num_threads: Optional[int]):
         try:
             threads = [threading.Thread(target=self.input_loop, daemon=True)]
-            if num_threads:
-                list__address = self.list__address[:num_threads]
-            else:
-                list__address = self.list__address
-            # endif
-            for address in list__address:
+            for address in self.list__address:
+                run_event = threading.Event()
+                if num_threads:
+                    run_event.clear()  # stop
+                else:
+                    run_event.set()  # run
+                # endif
+                self.run_events[address] = run_event
+
                 threads.append(threading.Thread(
                     target=self.mine_loop,
                     args=(address,),
@@ -94,12 +100,19 @@ class MidNightApp(BaseMiner):
             # endfor
 
             # interactive commands
+            last_switch_address = 0
             last_retrieve_a_new_challenge = 0
             last_show_info = 0
             last_maintain_cache = time.time()
             last_check_memory = 0
             while self.solver.is_running():
                 now = time.time()
+
+                if now - last_switch_address > 10:
+                    self.allocate_alive_address(num_threads=num_threads)
+
+                    last_switch_address = now
+                # endif
 
                 if now - last_retrieve_a_new_challenge > 60 * 2:
                     async_run_func(self.retrieve_new_challenge)
@@ -441,10 +454,70 @@ class MidNightApp(BaseMiner):
     # enddef
 
     @measure_time
+    def pause_solver(self, address: str):
+        ev = self.run_events.get(address)
+        if ev is not None:
+            ev.clear()
+        # endif
+    # enddef
+
+    @measure_time
+    def resume_solver(self, address: str):
+        ev = self.run_events.get(address)
+        if ev is not None:
+            ev.set()
+        # endif
+    # enddef
+
+    @measure_time
+    def allocate_alive_address(self, num_threads: Optional[int]):
+        if num_threads is None:
+            return
+        # endif
+
+        d = dict()
+        for address in self.list__address:
+            num_todo = len(self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Found, SolutionStatus.Invalid]))
+            d[address] = num_todo
+        # endfor
+
+        list__address_run = [addr for addr, num in sorted(d.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
+
+        msg = [
+            f'=== Switch Addresses to Run (<= {num_threads}) ===',
+            ]
+        flag_show = False
+        for addr in self.list__address:
+            nickname = f'[{self.addr2nickname[addr]}]'
+            ev = self.run_events[addr]
+            if addr in list__address_run:
+                if not ev.is_set():
+                    msg.append(f'{nickname} -> run')
+                    ev.set()
+                    flag_show = True
+                # endif
+            else:
+                if ev.is_set():
+                    msg.append(f'{nickname} -> stop')
+                    ev.clear()
+                    flag_show = True
+                # endif
+            # endif
+        # endfor
+
+        if flag_show:
+            self.logger.log('\n'.join(msg), log_type=LogType.Switch_To_Run)
+        # endif
+    # enddef
+
+    @measure_time
     def mine_loop(self, address: str):
         assert_type(address, str)
 
+        run_event = self.run_events[address]
         while self.solver.is_running():
+            run_event.wait()  # pass when 'set'; blocked when 'clear'
+
             challenge = self.tracker.get_oldest_unsolved_challenge(address)
 
             if challenge is None:
@@ -590,14 +663,14 @@ class MidNightApp(BaseMiner):
 
         msg = current_memory_status(vm)
         msg.append(f'-> release ROM cache?: {release_cache}')
-        self.logger.log('\n'.join(msg), log_type=LogType.Memory)
+        self.logger.log('\n'.join(msg), log_type=LogType.Memory_Usage)
 
         if release_cache:
             self.show_rom_cache_status()
 
             AshMaizeROMManager.clear_all()
 
-            self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory)
+            self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory_Usage)
         # endif
     # enddef
 
@@ -609,5 +682,5 @@ class MidNightApp(BaseMiner):
             '=== Threading Status ===',
             f'{num} threads running'
             ]
-            ), log_type=LogType.Thread)
+            ), log_type=LogType.Threading_Status)
     # enddef

@@ -235,14 +235,14 @@ class MidnightCLI(BaseMiner):
 
                 msg = current_memory_status(vm)
                 msg.append(f'-> release ROM cache?: {release_cache}')
-                self.logger.log('\n'.join(msg), log_type=LogType.Memory)
+                self.logger.log('\n'.join(msg), log_type=LogType.Memory_Usage)
 
                 if release_cache:
                     show_rom_cache_status()
 
                     AshMaizeROMManager.clear_all()
 
-                    self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory)
+                    self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory_Usage)
                 # endif
             # enddef
 
@@ -254,11 +254,11 @@ class MidnightCLI(BaseMiner):
                     f'{num} threads running'
                     ]
 
-                self.logger.log('\n'.join(msg), log_type=LogType.Thread)
+                self.logger.log('\n'.join(msg), log_type=LogType.Threading_Status)
             # enddef
 
             # Thread開始
-            threads = []  # type: list[threading.Thread]
+            threads = []  # type: list[threading.Threading_Status]
             def input_loop():
                 for line in sys.stdin:
                     cmd = line.strip().lower()

@@ -21,10 +21,11 @@ class LogType(Enum):
     Fetch_New_Challenge = ('fetch_new_challenge')
     Fetch_New_Challenge_Error = ('fetch_new_challenge_error')
     Rom_Cache_Status = ('rom_cache_status')
-    Memory = ('memory')
-    Thread = ('thread')
+    Memory_Usage = ('memory_usage')
+    Threading_Status = ('threading_status')
     Batch_Size_Search = ('batch_size_search')
     Challenge_Expire = ('challenge_expire')
+    Switch_To_Run = ('switch_to_run')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)
