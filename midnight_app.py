@@ -74,7 +74,12 @@ class MidNightApp(BaseMiner):
     def handle_mine(self, num_threads: Optional[int]):
         try:
             threads = [threading.Thread(target=self.input_loop, daemon=True)]
-            for address in self.list__address:
+            if num_threads:
+                list__address = self.list__address[:num_threads]
+            else:
+                list__address = self.list__address
+            # endif
+            for address in list__address:
                 threads.append(threading.Thread(
                     target=self.mine_loop,
                     args=(address,),
