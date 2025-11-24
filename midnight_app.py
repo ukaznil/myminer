@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 import time
@@ -671,11 +672,13 @@ class MidNightApp(BaseMiner):
 
     @measure_time
     def show_threading_status(self):
-        num = len(threading.enumerate())
+        num_cpu = os.cpu_count()
+        num_thread_running = len(threading.enumerate())
 
         self.logger.log('\n'.join([
             '=== Threading Status ===',
-            f'{num} threads running'
+            f'CPU num: {num_cpu}',
+            f'running threads: {num_thread_running}'
             ]
             ), log_type=LogType.Threading_Status)
     # enddef
