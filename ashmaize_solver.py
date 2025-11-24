@@ -80,56 +80,56 @@ class AshMaizeSolver:
         workinfo = self.dict__address__workinginfo[address]
         workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None)
 
-        list__batch_size = [10, 100, 1_000, 10_000]
+        try:
+            list__batch_size = [10, 100, 1_000, 10_000]
+            
+            # batch_size search
+            for batch_size in list__batch_size:
+                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=batch_size, is_search=True)
 
-        # batch_size search
-        for batch_size in list__batch_size:
-            solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=batch_size, is_search=True)
+                if solution:
+                    return solution
+                # endif
+            # endfor
 
-            if solution:
-                workinfo.clear()
+            # find the best_batch_size
+            best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get, default=None)
+            workinfo.best_batch_size = batch_size
 
-                return solution
-            # endif
-        # endfor
+            msg = [
+                f'=== {nickname} Batch-size Search ===',
+                f'address: {address}',
+                f'challenge: {challenge.challenge_id}',
+                f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in workinfo.batch_size_search.items()])}',
+                f'-> best batch-size = {best_batch_size:,}'
+                ]
+            self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
 
-        # find the best_batch_size
-        best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get, default=None)
-        workinfo.best_batch_size = batch_size
+            # mine-loop with the best batch_size
+            while self.is_running():
+                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
 
-        msg = [
-            f'=== {nickname} Batch-size Search ===',
-            f'address: {address}',
-            f'challenge: {challenge.challenge_id}',
-            f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in workinfo.batch_size_search.items()])}',
-            f'-> best batch-size = {best_batch_size:,}'
-            ]
-        self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
+                if solution:
+                    return solution
+                # endif
 
-        # mine-loop with the best batch_size
-        while self.is_running():
-            solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
+                if not challenge.is_valid():
+                    self.logger.log('\n'.join([
+                        f'=== {nickname} Challenge Expire ===',
+                        f'address: {address}',
+                        f'challenge: {challenge.challenge_id}',
+                        ]), log_type=LogType.Challenge_Expire, sufix=nickname)
 
-            if solution:
-                workinfo.clear()
+                    break
+                # endif
 
-                return solution
-            # endif
+                time.sleep(0.5)
+            # endwhile
 
-            if not challenge.is_valid():
-                self.logger.log('\n'.join([
-                    f'=== {nickname} Challenge Expire ===',
-                    f'address: {address}',
-                    f'challenge: {challenge.challenge_id}',
-                    ]), log_type=LogType.Challenge_Expire, sufix=nickname)
-
-                break
-            # endif
-
-            time.sleep(0.5)
-        # endwhile
-
-        return None
+            return None
+        finally:
+            workinfo.clear()
+        # endtry
     # enddef
 
     @measure_time
