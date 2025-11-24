@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 from typing import *
 
@@ -50,6 +51,13 @@ def safefstr(v: Any, fmt: str) -> str:
     # endif
 
     return f'{v:{fmt}}'
+
+
+def async_run_func(func):
+    threading.Thread(
+        target=func,
+        daemon=True,
+        ).start()
 
 
 def assert_type(v: Any, _type: type, item_type: Optional[type] = None, allow_none: bool = False):

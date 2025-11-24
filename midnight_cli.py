@@ -12,8 +12,8 @@ from challenge import Challenge
 from logger import LogType, Logger, measure_time
 from project import Project
 from solution import Solution
-from utils import assert_type, print_with_time, safefstr
 from tracker import SolutionStatus, Tracker
+from utils import assert_type, async_run_func, print_with_time, safefstr
 
 
 class MidnightCLI(BaseMiner):
@@ -168,39 +168,6 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
             # enddef
 
-            def async_show_worklist():
-                threading.Thread(
-                    target=show_worklist,
-                    daemon=True,
-                    ).start()
-            # enddef
-
-            def show_hashrate():
-                msg = [f'=== [H]ashrate ===']
-                for address in list__address:
-                    addr_short = self.addrbook[address]
-                    hashrate = safefstr(self.miner.get_hashrate(address), ',.0f')
-                    tries = safefstr(self.miner.get_tries(address), ',')
-                    challenge = self.miner.get_challenge(address)
-                    if challenge:
-                        cid = challenge.challenge_id
-                    else:
-                        cid = None
-                    # endif
-
-                    msg.append(f'[{addr_short}] Hashrate={hashrate} H/s, tries={tries}, challenge={cid}')
-                # endfor
-
-                self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
-            # enddef
-
-            def async_show_hashrate():
-                threading.Thread(
-                    target=show_hashrate,
-                    daemon=True,
-                    ).start()
-            # enddef
-
             def show_statistics():
                 msg = [f'=== [S]tatistics ===']
                 for address in list__address:
@@ -223,13 +190,6 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Statistics)
             # enddef
 
-            def async_show_statistics():
-                threading.Thread(
-                    target=show_statistics,
-                    daemon=True,
-                    ).start()
-            # enddef
-
             def show_rom_cache_status():
                 rom_cache_info = self.miner.rom_cache_info()
                 size_in_gib = sum(rom_cache_info.values()) / (1024 ** 3)
@@ -239,14 +199,7 @@ class MidnightCLI(BaseMiner):
                     f'size: {size_in_gib:,.2f} GiB',
                     ]
 
-                self.logger.log('\n'.join(msg), log_type=LogType.Cache_Status)
-            # enddef
-
-            def async_show_rom_cache_status():
-                threading.Thread(
-                    target=show_rom_cache_status,
-                    daemon=True,
-                    ).start()
+                self.logger.log('\n'.join(msg), log_type=LogType.Rom_Cache_Status)
             # enddef
 
             def maintain_rom_cache():
@@ -256,13 +209,6 @@ class MidnightCLI(BaseMiner):
                 # endfor
 
                 self.miner.maintain_rom_cache(list__challenge)
-            # enddef
-
-            def async_maintain_rom_cache():
-                threading.Thread(
-                    target=maintain_rom_cache,
-                    daemon=True,
-                    ).start()
             # enddef
 
             def check_memory():
@@ -297,13 +243,6 @@ class MidnightCLI(BaseMiner):
                 # endif
             # enddef
 
-            def async_check_memory():
-                threading.Thread(
-                    target=check_memory,
-                    daemon=True,
-                    ).start()
-            # enddef
-
             def check_threads():
                 num = len(threading.enumerate())
 
@@ -315,13 +254,6 @@ class MidnightCLI(BaseMiner):
                 self.logger.log('\n'.join(msg), log_type=LogType.Thread)
             # enddef
 
-            def async_check_threads():
-                threading.Thread(
-                    target=check_threads,
-                    daemon=True,
-                    ).start()
-            # enddef
-
             # Thread開始
             threads = []  # type: list[threading.Thread]
             def input_loop():
@@ -329,21 +261,19 @@ class MidnightCLI(BaseMiner):
                     cmd = line.strip().lower()
 
                     if cmd == 'w':
-                        async_show_worklist()
-                    elif cmd == 'h':
-                        async_show_hashrate()
+                        async_run_func(show_worklist)
                     elif cmd == 's':
-                        async_show_statistics()
+                        async_run_func(show_statistics)
                     elif cmd == 'r':
-                        async_show_rom_cache_status()
+                        async_run_func(show_rom_cache_status)
                     elif cmd == 't':
-                        async_check_threads()
+                        async_run_func(check_threads)
                     elif cmd == 'q':
                         self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                         self.miner.stop()
                         break
                     else:
-                        print(f"Invalid command: '{cmd}'. Available: ([W]orklist, [H]ashrate, [S]tatistics, [R]OM-cache, [T]hreads, [Q]uit)")
+                        print(f"Invalid command: '{cmd}'. Available: ([W]orklist, [S]tatistics, [R]OM-cache, [T]hreads, [Q]uit)")
                     # endif
                 # endfor
             # enddef
@@ -371,28 +301,27 @@ class MidnightCLI(BaseMiner):
                 now = time.time()
 
                 if now - last_fetch_a_new_challenge > 60 * 2:
-                    self.async_fetch_a_new_challenge()
+                    async_run_func(self.fetch_a_new_challenge)
 
                     last_fetch_a_new_challenge = now
                 # endif
 
                 if now - last_show_info > 60 * 15:
-                    async_show_worklist()
-                    async_show_hashrate()
-                    async_show_statistics()
-                    async_show_rom_cache_status()
+                    async_run_func(show_worklist)
+                    async_run_func(show_statistics)
+                    async_run_func(show_rom_cache_status)
 
                     last_show_info = now
                 # endif
 
                 if now - last_maintain_cache > 60 * 30:
-                    async_maintain_rom_cache()
+                    async_run_func(maintain_rom_cache)
 
                     last_maintain_cache = now
                 # endif
 
                 if now - last_check_memory > 60 * 10:
-                    async_check_memory()
+                    async_run_func(check_memory)
 
                     last_check_memory = now
                 # endif
@@ -666,14 +595,6 @@ class MidnightCLI(BaseMiner):
     # enddef
 
     @measure_time
-    def async_fetch_a_new_challenge(self) -> None:
-        threading.Thread(
-            target=self.fetch_a_new_challenge,
-            daemon=True,
-            ).start()
-    # enddef
-
-    @measure_time
     def mine_challenge(self, address: str, challenge: Challenge) -> None:
         assert_type(address, str)
         assert_type(challenge, Challenge)
@@ -683,7 +604,6 @@ class MidnightCLI(BaseMiner):
         # =======
         # Work assign
         # =======
-        self.tracker.add_work(address=address, challenge=challenge, status=WorkStatus.Solving)
         self.logger.log('\n'.join([
             f'=== {msgheader} Start this Challenge ===',
             f'address: {address}',
