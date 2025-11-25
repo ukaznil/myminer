@@ -105,6 +105,7 @@ class MidnightApp(BaseApp):
             for thread in threads:
                 thread.start()
             # endfor
+            time.sleep(3)
 
             # interactive commands
             last_retrieve_a_new_challenge = 0
@@ -577,7 +578,7 @@ class MidnightApp(BaseApp):
                         mark = '*'
                         msg_info.append(f'hashrate={safefstr(solving_info.hashrate, ",.0f")} H/s')
                         msg_info.append(f'tries={solving_info.tries:,}')
-                        msg_info.append(f'batch_size={working_info.best_batch_size:,}')
+                        msg_info.append(f'batch_size={safefstr(working_info.best_batch_size, ",")}')
                     else:
                         mark = ' '
                     # endif

@@ -35,10 +35,10 @@ def msg_with_time(msg: str, now: Optional[float]) -> str:
     return f'[{formatted}]\n{msg}\n'
 
 
-def print_with_time(msg: str):
+def print_with_time(msg: str, now: Optional[float] = None):
     assert_type(msg, str)
 
-    msg = msg_with_time(msg)
+    msg = msg_with_time(msg, now=now)
 
     print(msg, flush=True)
 
