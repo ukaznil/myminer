@@ -607,6 +607,7 @@ class MidnightApp(BaseApp):
     def show_hashrate(self):
         msg = ['=== Hashrate ===']
 
+        list__hashrate = []
         for address in self.list__address:
             nickname = f'[{self.nickname_of_address[address]}]'
 
@@ -618,9 +619,22 @@ class MidnightApp(BaseApp):
                 tries = job_stats.tries
                 updated_at = timestamp_to_str(job_stats.updated_at)
 
+                if hashrate:
+                    list__hashrate.append(hashrate)
+                # endif
+
                 msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s | {tries:,} tries (at {updated_at})')
             # endif
         # endfor
+
+        if list__hashrate:
+            hashrate_avg = sum(list__hashrate) / len(list__hashrate)
+            hashrate_max = max(list__hashrate)
+            hashrate_min = min(list__hashrate)
+            
+            msg.append(f'-' * 21)
+            msg.append(f'avg: {hashrate_avg:,.0f} H/s | max: {hashrate_max:,.0f} H/s | min: {hashrate_min:,.0f} H/s')
+        # endif
 
         self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
     # enddef
