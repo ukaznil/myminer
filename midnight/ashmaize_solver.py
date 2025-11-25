@@ -112,10 +112,10 @@ class AshMaizeSolver:
             while self.is_running():
                 if not challenge.is_valid():
                     self.logger.log('\n'.join([
-                        f'=== {nickname} Challenge Expire ===',
+                        f'=== {nickname} Challenge Expired ===',
                         f'address: {address}',
                         f'challenge: {challenge.challenge_id}',
-                        ]), log_type=LogType.Challenge_Expire, sufix=nickname)
+                        ]), log_type=LogType.Challenge_Expired, sufix=nickname)
 
                     break
                 # endif

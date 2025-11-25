@@ -9,23 +9,31 @@ from utils import assert_type, msg_with_time
 
 
 class LogType(Enum):
-    Func_Time_Measure = ('func_time_measure')
-    System = ('system')
-    Worklist = ('worklist')
-    Hashrate = ('hashrate')
-    Statistics = ('statistics')
-    Start_New_Challenge = ('start_new_challenge')
-    Solution_Found = ('solution_found')
-    Solution_Submission = ('solution_submission')
-    Solution_Submission_Error = ('solution_submission_error')
-    Fetch_New_Challenge = ('fetch_new_challenge')
-    Fetch_New_Challenge_Error = ('fetch_new_challenge_error')
-    Rom_Cache_Status = ('rom_cache_status')
-    Memory_Usage = ('memory_usage')
-    Threading_Status = ('threading_status')
-    Batch_Size_Search = ('batch_size_search')
-    Challenge_Expire = ('challenge_expire')
-    Active_Addresses = ('active_addresses')
+    # system
+    System = ('00_system')
+
+    # work
+    Worklist = ('10_worklist')
+    Statistics = ('11_statistics')
+    Memory_Usage = ('12_memory_usage')
+    Rom_Cache_Status = ('13_rom_cache_status')
+    Threading_Status = ('14_threading_status')
+
+    # main loop
+    Fetch_New_Challenge = ('20_fetch_new_challenge')
+    Fetch_New_Challenge_Error = ('21_fetch_new_challenge_error')
+
+    # mining loop
+    Active_Addresses = ('30_active_addresses')
+    Start_New_Challenge = ('31_start_new_challenge')
+    Batch_Size_Search = ('32_batch_size_search')
+    Solution_Found = ('33_solution_found')
+    Solution_Submission = ('34_solution_submission')
+    Solution_Submission_Error = ('35_solution_submission_error')
+    Challenge_Expired = ('36_challenge_expired')
+
+    # misc
+    Func_Time_Measure = ('99_func_time_measure')
 
     def __init__(self, shortname: str):
         assert_type(shortname, str)
@@ -39,7 +47,7 @@ class Logger:
         assert_type(project, Project)
 
         self.log_dirname = os.path.join('logs', project.name.lower())
-        os.mkdir(self.log_dirname)
+        os.makedirs(self.log_dirname, exist_ok=True)
     # enddef
 
     def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None):
