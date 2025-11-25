@@ -164,6 +164,7 @@ class AshMaizeSolver:
         time_start = time.time()
 
         # bind functions to local
+        workinfo = self.dict__address__workinginfo[address]
         get_fast_nonce = self.get_fast_nonce
         meets_difficulty = self.meets_difficulty
 
@@ -173,7 +174,9 @@ class AshMaizeSolver:
             if meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
                 nonce_hex = preimages[idx_hash_hex][:16]
 
-                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=0)
+                workinfo.solving_info.tries += (idx_hash_hex + 1)
+
+                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=workinfo.solving_info.tries)
             # endif
         # endfor
 
@@ -182,7 +185,6 @@ class AshMaizeSolver:
 
         hashrate = batch_size / time_elapse
 
-        workinfo = self.dict__address__workinginfo[address]
         if is_search:
             workinfo.batch_size_search[batch_size] = hashrate
         else:
