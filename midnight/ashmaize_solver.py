@@ -108,7 +108,7 @@ class AshMaizeSolver:
         # try to find a solution
         # -------------------------
         try:
-            list__batch_size = [100, 500, 1_000, 5_000, 10_000, 50_000]
+            list__batch_size = [100, 500, 1_000, 5_000, 10_000]
 
             # -------------------------
             # search for the best batch-size
