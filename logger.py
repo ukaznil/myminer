@@ -38,7 +38,8 @@ class Logger:
     def __init__(self, project: Project):
         assert_type(project, Project)
 
-        self._log_dirname = os.path.join('logs')
+        self.log_dirname = os.path.join('logs', project.name.lower())
+        os.mkdir(self.log_dirname)
     # enddef
 
     def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None):
@@ -48,7 +49,7 @@ class Logger:
 
         msg = msg_with_time(msg, now=now)
 
-        filepath = os.path.join(self._log_dirname,
+        filepath = os.path.join(self.log_dirname,
                                 f'{log_type.shortname}' + (f'_{sufix}' if sufix else '') + '.log')
         with open(filepath, 'wt') as f:
             f.write(msg)
