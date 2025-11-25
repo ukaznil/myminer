@@ -99,7 +99,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     if args.project == 'midnight':
-        app = MidnightApp(project=Project.MidNightt)
+        app = MidnightApp(project=Project.Midnight)
     elif args.project == 'defensio':
         app = MidnightApp(project=Project.Defensio)
     else:

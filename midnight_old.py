@@ -86,7 +86,7 @@ class MidnightCLI(BaseApp):
 
         # その他
         if args.project == 'midnight':
-            self.project = Project.MidNight
+            self.project = Project.Midnight
         elif args.project == 'defensio':
             self.project = Project.Defensio
         else:
@@ -179,7 +179,7 @@ class MidnightCLI(BaseApp):
                         time.sleep(0.5)
 
                         receipts = resp['local']['crypto_receipts']
-                        if self.project == Project.MidNight:
+                        if self.project == Project.Midnight:
                             raise NotImplementedError
                         elif self.project == Project.Defensio:
                             allocation = resp['local']['dfo_allocation'] / 1_000_000
@@ -353,7 +353,7 @@ class MidnightCLI(BaseApp):
               "message": "I agree to ... <hash>"
             }
         """
-        if self.project == Project.MidNight:
+        if self.project == Project.Midnight:
             return self._get('TandC')
         elif self.project == Project.Defensio:
             return {

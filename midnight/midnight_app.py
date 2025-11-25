@@ -91,7 +91,7 @@ class MidnightApp(BaseApp):
             donation_address = resp['local_with_donate']['donation_address']
             receipts = resp['local']['crypto_receipts']
             sum_receipts += receipts
-            if self.project == Project.MidNight:
+            if self.project == Project.Midnight:
                 allocation = None
             elif self.project == Project.Defensio:
                 allocation = resp['local']['dfo_allocation'] / 1_000_000
@@ -199,7 +199,7 @@ class MidnightApp(BaseApp):
               "message": "I agree to ... <hash>"
             }
         """
-        if self.project == Project.MidNight:
+        if self.project == Project.Midnight:
             return self._get('TandC')
         elif self.project == Project.Defensio:
             return {
@@ -635,7 +635,7 @@ class MidnightApp(BaseApp):
                 time.sleep(0.5)
 
                 receipts = resp['local']['crypto_receipts']
-                if self.project == Project.MidNight:
+                if self.project == Project.Midnight:
                     raise NotImplementedError
                 elif self.project == Project.Defensio:
                     allocation = resp['local']['dfo_allocation'] / 1_000_000

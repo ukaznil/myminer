@@ -4,7 +4,7 @@ from utils import assert_type
 
 
 class Project(Enum):
-    MidNight = ('https://scavenger.prod.gd.midnighttge.io')
+    Midnight = ('https://scavenger.prod.gd.midnighttge.io')
     Defensio = ('https://mine.defensio.io/api')
 
     def __init__(self, base_url: str):
