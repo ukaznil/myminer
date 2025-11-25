@@ -40,7 +40,9 @@ class MidnightApp(BaseApp):
     def handle_register(self, address: str):
         assert_type(address, str)
 
-        # tandc
+        # -------------------------
+        # Terms & Conditions
+        # -------------------------
         data = self.get_tandc()
         print_with_time('\n'.join([
             f'== Terms and Conditions ===',
@@ -51,7 +53,9 @@ class MidnightApp(BaseApp):
             f'{data.get("message", "")}',
             ]))
 
+        # -------------------------
         # register
+        # -------------------------
         signature = input('Signature: ')
         pubkey = input('Public Key: ')
         resp = self.register_address(address=address, signature=signature, pubkey=pubkey)
@@ -169,6 +173,9 @@ class MidnightApp(BaseApp):
     @measure_time
     def handle_mine(self, num_threads: Optional[int]):
         try:
+            # -------------------------
+            # prepare threads
+            # -------------------------
             threads = [threading.Thread(target=self.input_loop, daemon=True)]
             for address in self.list__address:
                 run_event = threading.Event()
@@ -186,7 +193,9 @@ class MidnightApp(BaseApp):
                     ))
             # endfor
 
+            # -------------------------
             # start mining !!
+            # -------------------------
             self.set_active_addresses(num_threads=num_threads)
             self.solver.start()
             for thread in threads:
@@ -194,7 +203,9 @@ class MidnightApp(BaseApp):
             # endfor
             time.sleep(3)
 
+            # -------------------------
             # interactive commands
+            # -------------------------
             now = time.time()
             last_retrieve_new_challenge = 0
             last_show_worklist = 0
@@ -392,9 +403,9 @@ class MidnightApp(BaseApp):
             f'{challenge}',
             ]), log_type=LogType.Start_New_Challenge, sufix=nickname)
 
-        # =======
+        # -------------------------
         # Find a solution
-        # =======
+        # -------------------------
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
@@ -417,9 +428,9 @@ class MidnightApp(BaseApp):
             return
         # endif
 
-        # =======
+        # -------------------------
         # Submit the solution
-        # =======
+        # -------------------------
         try:
             resp = self.submit_solution(address=address, challenge=challenge, solution=solution)
 
