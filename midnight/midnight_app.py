@@ -537,54 +537,6 @@ class MidnightApp(BaseApp):
     # enddef
 
     # -------------------------
-    # scheduled commands
-    # -------------------------
-    @measure_time
-    def maintain_rom_cache(self):
-        def memory_stats_str(sm: SystemMetrics) -> list[str]:
-            return [
-                f'memory total   : {sm.memory_total_gb:,.2f} GiB',
-                f'memory used    : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-                f'memory avail.  : {sm.memory_availale_gb:,.2f} Gib',
-                f'memory free    : {sm.memory_free_gb:,.2f} Gib',
-                ]
-        # enddef
-
-        # -------------------------
-        # check if ROM caches need to be deleted
-        # -------------------------
-        sm = SystemMetrics.init()
-        rom_cache = AshMaizeROMManager.status()
-        rom_cache_size_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
-
-        is_clear_needed = (sm.memory_used_percent > 80) or (sm.memory_available < rom_cache_size_avg)
-
-        # -------------------------
-        # take an action
-        # -------------------------
-        msg = ['=== ROM Cache Maintenance ===']
-        msg += memory_stats_str(sm)
-        if is_clear_needed:
-            AshMaizeROMManager.clear_all()
-
-            msg.append(f'-> All ROM caches have been cleared.')
-        else:
-            keys_need = {
-                ch.no_pre_mine
-                for address in self.list__address
-                for ch in self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
-                }
-            keys_drop = {key for key in AshMaizeROMManager.keys() if key not in keys_need}
-            AshMaizeROMManager.drop(*keys_drop)
-
-            msg.append(f'-> Some ROM caches have been cleared.')
-        # endif
-        msg += memory_stats_str(SystemMetrics.init())
-
-        self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Maintenance)
-    # enddef
-
-    # -------------------------
     # interactive commands
     # -------------------------
     @measure_time
@@ -663,8 +615,10 @@ class MidnightApp(BaseApp):
             if job_stats:
                 solving_challenge = job_stats.challenge
                 hashrate = job_stats.hashrate
+                tries = job_stats.tries
+                updated_at = timestamp_to_str(job_stats.updated_at)
 
-                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s')
+                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s | {tries:,} (at {updated_at})')
             # endif
         # endfor
 
@@ -762,4 +716,52 @@ class MidnightApp(BaseApp):
             f'used : {size_gb:,.2f} GiB',
             ]
             ), log_type=LogType.ROM_Cache_Status)
+    # enddef
+
+    # -------------------------
+    # other scheduled commands
+    # -------------------------
+    @measure_time
+    def maintain_rom_cache(self):
+        def memory_stats_str(sm: SystemMetrics) -> list[str]:
+            return [
+                f'memory total   : {sm.memory_total_gb:,.2f} GiB',
+                f'memory used    : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+                f'memory avail.  : {sm.memory_availale_gb:,.2f} Gib',
+                f'memory free    : {sm.memory_free_gb:,.2f} Gib',
+                ]
+        # enddef
+
+        # -------------------------
+        # check if ROM caches need to be deleted
+        # -------------------------
+        sm = SystemMetrics.init()
+        rom_cache = AshMaizeROMManager.status()
+        rom_cache_size_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
+
+        is_clear_needed = (sm.memory_used_percent > 80) or (sm.memory_available < rom_cache_size_avg)
+
+        # -------------------------
+        # take an action
+        # -------------------------
+        msg = ['=== ROM Cache Maintenance ===']
+        msg += memory_stats_str(sm)
+        if is_clear_needed:
+            AshMaizeROMManager.clear_all()
+
+            msg.append(f'-> All ROM caches have been cleared.')
+        else:
+            keys_need = {
+                ch.no_pre_mine
+                for address in self.list__address
+                for ch in self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
+                }
+            keys_drop = {key for key in AshMaizeROMManager.keys() if key not in keys_need}
+            AshMaizeROMManager.drop(*keys_drop)
+
+            msg.append(f'-> Some ROM caches have been cleared.')
+        # endif
+        msg += memory_stats_str(SystemMetrics.init())
+
+        self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Maintenance)
     # enddef
