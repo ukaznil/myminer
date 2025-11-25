@@ -50,6 +50,40 @@ def build_parser() -> argparse.ArgumentParser:
         )
     wallet_register_parser.set_defaults(handler='register_wallet')
 
+    # wallet donate -a ... -to ...
+    wallet_donate_parser = wallet_subparsers.add_parser(
+        'donate',
+        description='Donate mining rewards from one wallet address to another.',
+        help='Donate rewards from a wallet address.',
+        )
+    wallet_donate_parser.add_argument(
+        '-a', '--address',
+        type=str,
+        required=True,
+        help='Source wallet address to donate from.',
+        )
+    wallet_donate_parser.add_argument(
+        '-to', '--donate_to',
+        type=str,
+        required=True,
+        help='Destination wallet address to donate rewards to.',
+        )
+    wallet_donate_parser.set_defaults(handler='donate')
+
+    # wallet donate_all -to ...
+    wallet_donate_all_parser = wallet_subparsers.add_parser(
+        'donate_all',
+        description='Donate all mining rewards to a single wallet address.',
+        help='Donate all rewards to one wallet.',
+        )
+    wallet_donate_all_parser.add_argument(
+        '-to', '--donate_to',
+        type=str,
+        required=True,
+        help='Destination wallet address to receive all rewards.',
+        )
+    wallet_donate_all_parser.set_defaults(handler='donate_all')
+
     # wallet list
     wallet_list_parser = wallet_subparsers.add_parser(
         'list',
@@ -85,6 +119,14 @@ def handle_register_wallet(app: BaseApp, args: argparse.Namespace) -> None:
 
 def handle_list_wallet(app: BaseApp, args: argparse.Namespace) -> None:
     app.handle_list_wallets()
+
+
+def handle_donate(app: BaseApp, args: argparse.Namespace) -> None:
+    app.handle_donate(address=args.address, to=args.donate_to)
+
+
+def handle_donate_all(app: BaseApp, args: argparse.Namespace) -> None:
+    app.handle_donate_all(to=args.donate_to)
 
 
 def handle_mine(app: BaseApp, args: argparse.Namespace) -> None:

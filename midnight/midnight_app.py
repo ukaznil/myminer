@@ -114,6 +114,63 @@ class MidnightApp(BaseApp):
     # enddef
 
     @measure_time
+    def handle_donate(self, address: str, to: str):
+        assert_type(address, str)
+        assert_type(to, str)
+
+        if address not in self.list__address:
+            raise ValueError(f'Given address={address} is not included in registered wallets.')
+        # endif
+
+        nickname = f'[{self.addr2nickname[address]}]'
+        message_to_sign = f'Assign accumulated Scavenger rights to: {to}'
+        print_with_time('\n'.join([
+            f'{nickname} {address}',
+            f'=== Message to sign (wallet CIP-30) ===',
+            f'{message_to_sign}'
+            ]))
+        signature = input(f'Signature: ')
+
+        try:
+            resp = self.donate_to(destionation_address=to, original_address=address, signature=signature)
+            status = resp.get('status')
+            msg = [
+                '=== Donation Response ===',
+                f'{resp}'
+                ]
+            if status == 'success':
+                msg.append(f'-> Donation Validated !!!')
+            else:
+                status_code = resp.get('statusCode')
+                error = resp.get('error')
+                message = resp.get('message')
+
+                msg.append(f'-> Donation Invalid. code={status_code}, error={error}, message={message}')
+            # endif
+
+            self.logger.log('\n'.join(msg), log_type=LogType.Donate_To, sufix=nickname)
+        except Exception as e:
+            self.logger.log('\n'.join([
+                f'=== {nickname} Donation Error ===',
+                f'address  : {address}',
+                f'donate_to: {to}',
+                f'error: {e}'
+                ]), log_type=LogType.Donate_To_Error, sufix=nickname)
+        # endtry
+    # enddef
+
+    @measure_time
+    def handle_donate_all(self, to: str):
+        assert_type(to, str)
+
+        for address in self.list__address:
+            self.handle_donate(address=address, to=to)
+        # endfor
+
+        self.handle_list_wallets()
+    # enddef
+
+    @measure_time
     def handle_mine(self, num_threads: Optional[int]):
         try:
             threads = [threading.Thread(target=self.input_loop, daemon=True)]
@@ -277,86 +334,6 @@ class MidnightApp(BaseApp):
         path = f'/solution/{address}/{challenge.challenge_id}/{solution.nonce_hex}'
 
         return self._post(path, {})
-    # enddef
-
-    # -------------------------
-    # register / helper
-    # -------------------------
-
-    # -------------------------
-    # donate / helper
-    # -------------------------
-    @measure_time
-    def donate_each_address(self, address: str, donation_address: str) -> bool:
-        assert_type(address, str)
-        assert_type(donation_address, str)
-
-        message_to_sign = f'Assign accumulated Scavenger rights to: {donation_address}'
-        print_with_time('\n'.join([
-            f'address: [{self.addr2nickname[address]}] {address}',
-            f'=== Message to sign (wallet CIP-30) ===',
-            ]))
-        signature = input(f'{message_to_sign}')
-
-        resp = self.donate_to(destionation_address=donation_address, original_address=address, signature=signature)
-        status = resp.get('status')
-        if status == 'success':
-            print_with_time('\n'.join([
-                '=== Donation Response: Success ===',
-                f'{resp}'
-                ]))
-
-            return True
-        else:
-            message = resp.get('message')
-            error = resp.get('error')
-            status_code = resp.get('status_code')
-            print_with_time('\n'.join([
-                '=== Donetion Response: Error ===',
-                f'status: {status_code}'
-                f'message: {message}',
-                f'error: {error}',
-                ]))
-
-            return False
-        # endif
-    # enddef
-
-    @measure_time
-    def donate_all(self, donation_address: str, dry_run: bool = False):
-        assert_type(donation_address, str)
-        assert_type(dry_run, bool)
-
-        list__address = self.make_addressbook(None)
-        assert donation_address in list__address, donation_address
-
-        for address in list__address:
-            addr_short = self.addr2nickname[address]
-
-            resp_statistics = self.get_statistics(address)
-            current_donattoin_address = resp_statistics['local_with_donate']['donation_address']
-            if current_donattoin_address == donation_address:
-                print(f'For [{addr_short}] {address[:7]}...{address[-7:]}, the given donation address={donation_address[:7]}...{donation_address[-7:]} is already set. Skipped.')
-            else:
-                print(f'For [{addr_short}] {address[:7]}...{address[-7:]}, the given donation address={donation_address[:7]}...{donation_address[-7:]} is not set yet.')
-                if dry_run:
-                    print(f'-> Dry-run.')
-                else:
-                    success = self.donate_each_address(address=address, donation_address=donation_address)
-                # endif
-            # endif
-
-            time.sleep(1)
-        # endfor
-    # enddef
-
-    @measure_time
-    def donate_all_with_confirmation(self, donation_address: str):
-        assert_type(donation_address, str)
-
-        pass
-        # self.donate_all(donation_address, dry_run=False)
-        # self.donate_all(donation_address, dry_run=True)
     # enddef
 
     # -------------------------

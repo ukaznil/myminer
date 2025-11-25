@@ -34,6 +34,8 @@ class LogType(Enum):
 
     # wallet
     Wallet_List = ('80_wallet_list')
+    Donate_To = ('81_donate_to')
+    Donate_To_Error = ('82_donate_to_error')
 
     # misc
     Func_Time_Measure = ('99_func_time_measure')
