@@ -32,6 +32,9 @@ class LogType(Enum):
     Solution_Submission_Error = ('35_solution_submission_error')
     Challenge_Expired = ('36_challenge_expired')
 
+    # wallet
+    Wallet_List = ('80_wallet_list')
+
     # misc
     Func_Time_Measure = ('99_func_time_measure')
 

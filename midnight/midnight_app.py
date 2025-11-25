@@ -76,7 +76,41 @@ class MidnightApp(BaseApp):
 
     @measure_time
     def handle_list_wallets(self):
-        pass
+        msg = [
+            '=== Wallet List ===',
+            ]
+
+        sum_receipts = 0
+        sum_allocation = 0
+        for address in self.list__address:
+            nickname = f'[{self.addr2nickname[address]}]'
+
+            resp = self.get_statistics(address=address)
+            time.sleep(0.1)
+
+            donation_address = resp['local_with_donate']['donation_address']
+            receipts = resp['local']['crypto_receipts']
+            sum_receipts += receipts
+            if self.project == Project.MidNight:
+                allocation = None
+            elif self.project == Project.Defensio:
+                allocation = resp['local']['dfo_allocation'] / 1_000_000
+                sum_allocation += allocation
+            # endif
+
+            msg.append(f'{nickname}')
+            msg.append(f'- address   : {address}')
+            msg.append(f'- donated_to: {donation_address} (self?: {address == donation_address})')
+            msg.append(f'- receipts: {receipts}')
+            msg.append(f'- allocation: {safefstr(allocation, ",")}')
+        # endfor
+
+        # sum
+        msg.append('-' * 21)
+        msg.append(f'- receipts: {sum_receipts:,}')
+        msg.append(f'- allocation: {sum_allocation:,}')
+
+        self.logger.log('\n'.join(msg), log_type=LogType.Wallet_List)
     # enddef
 
     @measure_time
