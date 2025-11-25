@@ -628,11 +628,13 @@ class MidnightApp(BaseApp):
         # endfor
 
         if list__hashrate:
-            hashrate_avg = sum(list__hashrate) / len(list__hashrate)
+            hashrate_sum = sum(list__hashrate)
+            hashrate_avg = hashrate_sum / len(list__hashrate)
             hashrate_max = max(list__hashrate)
             hashrate_min = min(list__hashrate)
-            
+
             msg.append(f'-' * 21)
+            msg.append(f'sum: {hashrate_sum:,.0f} H/s')
             msg.append(f'avg: {hashrate_avg:,.0f} H/s | max: {hashrate_max:,.0f} H/s | min: {hashrate_min:,.0f} H/s')
         # endif
 
