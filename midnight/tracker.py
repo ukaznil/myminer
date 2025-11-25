@@ -6,10 +6,10 @@ from typing import Iterable, Optional
 
 from peewee import DateTimeField, IntegerField, JOIN, Model, SqliteDatabase, TextField
 
-from challenge import Challenge
 from logger import Logger, measure_time
+from midnight.challenge import Challenge
+from midnight.solution import Solution
 from project import Project
-from solution import Solution
 from utils import assert_type, parse_iso8601_to_utc_naive
 
 # db = SqliteQueueDatabase(

@@ -1,10 +1,10 @@
 import threading
 
-from challenge import Challenge
+from midnight.challenge import Challenge
 from utils import assert_type
 
 try:
-    import ashmaize_loader
+    from midnight import ashmaize_loader
     ashmaize_py = ashmaize_loader.init()
 except ImportError:
     ashmaize_py = None

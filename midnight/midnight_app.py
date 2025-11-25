@@ -6,14 +6,14 @@ from typing import *
 
 import psutil
 
-from ashmaize_rom_manager import AshMaizeROMManager
-from ashmaize_solver import AshMaizeSolver
 from base_miner import BaseMiner
-from challenge import Challenge
 from logger import LogType, Logger, measure_time
+from midnight.ashmaize_rom_manager import AshMaizeROMManager
+from midnight.ashmaize_solver import AshMaizeSolver
+from midnight.challenge import Challenge
+from midnight.solution import Solution
+from midnight.tracker import SolutionStatus, Tracker
 from project import Project
-from solution import Solution
-from tracker import SolutionStatus, Tracker
 from utils import assert_type, async_run_func, print_with_time, safefstr
 
 

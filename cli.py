@@ -1,6 +1,6 @@
 import argparse
 
-from midnight_app import MidNightApp
+from midnight.midnight_app import MidNightApp
 from project import Project
 
 

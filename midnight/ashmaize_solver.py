@@ -5,10 +5,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
 
-from ashmaize_rom_manager import AshMaizeROMManager
-from challenge import Challenge
 from logger import LogType, Logger, measure_time
-from solution import Solution
+from midnight.ashmaize_rom_manager import AshMaizeROMManager
+from midnight.challenge import Challenge
+from midnight.solution import Solution
 from utils import assert_type
 
 
