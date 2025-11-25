@@ -618,7 +618,7 @@ class MidnightApp(BaseApp):
                 tries = job_stats.tries
                 updated_at = timestamp_to_str(job_stats.updated_at)
 
-                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s | {tries:,} (at {updated_at})')
+                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s | {tries:,} tries (at {updated_at})')
             # endif
         # endfor
 
