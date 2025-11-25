@@ -195,36 +195,38 @@ class MidnightApp(BaseApp):
             time.sleep(3)
 
             # interactive commands
-            last_retrieve_a_new_challenge = 0
-            last_show_info = 0
-            last_maintain_cache = time.time()
+            now = time.time()
+            last_retrieve_new_challenge = 0
+            last_show_worklist = 0
+            last_show_hashrate = now
+            last_maintain_cache = now
             while self.solver.is_running():
                 now = time.time()
 
-                if now - last_retrieve_a_new_challenge > 60 * 2:
+                if now - last_retrieve_new_challenge > 60 * 2:
                     async_run_func(self.retrieve_new_challenge)
-
-                    last_retrieve_a_new_challenge = now
+                    last_retrieve_new_challenge = now
                 # endif
 
-                if now - last_show_info > 60 * 15:
+                if now - last_show_worklist > 60 * 20:
                     async_run_func(self.show_worklist)
-                    async_run_func(self.show_statistics)
-                    async_run_func(self.show_rom_cache_status)
+                    last_show_worklist = now
+                # endif
 
-                    last_show_info = now
+                if now - last_show_hashrate > 60 * 5:
+                    async_run_func(self.show_hashrate)
+                    last_show_hashrate = now
                 # endif
 
                 if now - last_maintain_cache > 60 * 30:
                     async_run_func(self.maintain_rom_cache)
-
                     last_maintain_cache = now
                 # endif
 
                 time.sleep(0.5)
             # endwhile
 
-            self.logger.log('=== Miner Stopped. ===', log_type=LogType.System)
+            self.logger.log('=== Miner Stopped ===', log_type=LogType.System)
         finally:
             self.tracker.close()
         # endtry
@@ -566,7 +568,7 @@ class MidnightApp(BaseApp):
         # endif
         msg += memory_stats_str(SystemMetrics.init())
 
-        self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Management)
+        self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Maintenance)
     # enddef
 
     # -------------------------
@@ -579,6 +581,8 @@ class MidnightApp(BaseApp):
 
             if cmd == 'w':
                 async_run_func(self.show_worklist)
+            if cmd == 'h':
+                async_run_func(self.show_hashrate)
             elif cmd == 's':
                 async_run_func(self.show_statistics)
             elif cmd == 'm':
@@ -590,7 +594,7 @@ class MidnightApp(BaseApp):
                 self.solver.stop()
                 break
             else:
-                print(f"Invalid command: '{cmd}'. Available: ([W]ork List, [S]tatistics, System [M]etrics, [R]OM Cache, [Q]uit)")
+                print(f"Invalid command: '{cmd}'. Available: [W]orklist | [H]ashrate | [S]tatistics | System [M]etrics | [R]OM Cache | [Q]uit")
             # endif
         # endfor
     # enddef
@@ -612,9 +616,7 @@ class MidnightApp(BaseApp):
             # endif
             if len(list__challenge) > 0:
                 for challenge in list__challenge:
-                    msg_info = [
-                        f'challenge={challenge.challenge_id}',
-                        ]
+                    msg_info = [f'challenge={challenge.challenge_id}']
 
                     if solving_challenge and challenge.challenge_id == solving_challenge.challenge_id:
                         mark = '*'
@@ -633,6 +635,26 @@ class MidnightApp(BaseApp):
         # endfor
 
         self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
+    # enddef
+
+    @measure_time
+    def show_hashrate(self):
+        msg = ['=== Hashrate ===']
+
+        for address in self.list__address:
+            nickname = f'[{self.nickname_of_address[address]}]'
+
+            work_profile = self.solver.wp_by_address[address]
+            job_stats = work_profile.job_stats
+            if job_stats:
+                solving_challenge = job_stats.challenge
+                hashrate = job_stats.hashrate
+
+                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s')
+            # endif
+        # endfor
+
+        self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
     # enddef
 
     @measure_time

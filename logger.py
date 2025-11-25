@@ -14,10 +14,11 @@ class LogType(Enum):
 
     # work
     Worklist = ('10_worklist')
-    Statistics = ('11_statistics')
-    System_Metrics = ('12_system_metrics')
-    ROM_Cache_Status = ('13_rom_cache_status')
-    ROM_Cache_Management = ('14_rom_cache_all_cleared')
+    Hashrate = ('11_hashrate')
+    Statistics = ('12_statistics')
+    System_Metrics = ('13_system_metrics')
+    ROM_Cache_Status = ('14_rom_cache_status')
+    ROM_Cache_Maintenance = ('15_rom_cache_maintenance')
 
     # main loop
     Fetch_New_Challenge = ('20_fetch_new_challenge')
