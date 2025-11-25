@@ -546,7 +546,7 @@ class MidnightApp(BaseApp):
 
             if cmd == 'w':
                 async_run_func(self.show_worklist)
-            if cmd == 'h':
+            elif cmd == 'h':
                 async_run_func(self.show_hashrate)
             elif cmd == 's':
                 async_run_func(self.show_statistics)
