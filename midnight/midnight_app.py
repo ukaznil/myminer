@@ -684,9 +684,8 @@ class MidnightApp(BaseApp):
             f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
             f'memory available  : {sm.memory_availale_gb:,.2f} GiB',
             f'memory free       : {sm.memory_free_gb:,.2f} GiB',
+            f'CPU num           : {sm.cpu_num} ({sm.threads_running} threads running)',
             f'CPU usage         : {sm.cpu_usage_percent:.1f} %',
-            f'threads num       : {sm.threads_num}',
-            f'threads running   : {sm.threads_running}',
             ]
 
         # CPUクロック
