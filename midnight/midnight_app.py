@@ -623,7 +623,7 @@ class MidnightApp(BaseApp):
                     list__hashrate.append(hashrate)
                 # endif
 
-                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, ",.0f")} H/s | {tries:,} tries (at {updated_at})')
+                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, "7,.0f")} H/s | {tries:10,.0f} tries (at {updated_at})')
             # endif
         # endfor
 
@@ -673,8 +673,8 @@ class MidnightApp(BaseApp):
             '=== System [M]etrics ===',
             f'memory total      : {sm.memory_total_gb:,.2f} GiB',
             f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-            f'memory available  : {sm.memory_availale_gb:,.2f} Gib',
-            f'memory free       : {sm.memory_free_gb:,.2f} Gib',
+            f'memory available  : {sm.memory_availale_gb:,.2f} GiB',
+            f'memory free       : {sm.memory_free_gb:,.2f} GiB',
             f'CPU usage         : {sm.cpu_usage_percent:.1f} %',
             f'threads           : {sm.threads_running}',
             ]
@@ -741,10 +741,10 @@ class MidnightApp(BaseApp):
     def maintain_rom_cache(self):
         def memory_stats_str(sm: SystemMetrics) -> list[str]:
             return [
-                f'memory total   : {sm.memory_total_gb:,.2f} GiB',
-                f'memory used    : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-                f'memory avail.  : {sm.memory_availale_gb:,.2f} Gib',
-                f'memory free    : {sm.memory_free_gb:,.2f} Gib',
+                f'memory total      : {sm.memory_total_gb:,.2f} GiB',
+                f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+                f'memory available  : {sm.memory_availale_gb:,.2f} GiB',
+                f'memory free       : {sm.memory_free_gb:,.2f} GiB',
                 ]
         # enddef
 
@@ -775,9 +775,15 @@ class MidnightApp(BaseApp):
             keys_drop = {key for key in AshMaizeROMManager.keys() if key not in keys_need}
             AshMaizeROMManager.drop(*keys_drop)
 
-            msg.append(f'-> Some ROM caches have been cleared.')
+            msg.append('-' * 21)
+            msg.append(f'-> {len(keys_drop)} ROM caches have been cleared.')
+            msg.append('-' * 21)
         # endif
         msg += memory_stats_str(SystemMetrics.init())
 
         self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Maintenance)
+
+        if is_clear_needed:
+            self.show_rom_cache_status()
+        # endif
     # enddef
