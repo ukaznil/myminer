@@ -13,7 +13,7 @@ from utils import assert_type
 
 
 @dataclass
-class SolvingInfo:
+class JobStats:
     challenge: Challenge
     tries: int
     hashrate: float
@@ -21,13 +21,13 @@ class SolvingInfo:
 
 
 @dataclass
-class SolverInfo:
-    solving_info: Optional[SolvingInfo] = None
+class WorkerProfile:
+    job_stats: Optional[JobStats] = None
     best_batch_size: Optional[int] = None
     batch_size_search: dict[int, list[float]] = field(default_factory=lambda: defaultdict(list))
 
     def clear(self):
-        self.solving_info = None
+        self.job_stats = None
         self.best_batch_size = None
         self.batch_size_search.clear()
     # enddef
@@ -44,7 +44,7 @@ class AshMaizeSolver:
         # event handling
         # -------------------------
         self._stop_event = threading.Event()
-        self.dict__address__workinginfo = defaultdict(SolverInfo)  # type: dict[str, SolverInfo]
+        self.wp_by_address = defaultdict(WorkerProfile)  # type: dict[str, WorkerProfile]
 
         # -------------------------
         # generate nonces
@@ -81,8 +81,8 @@ class AshMaizeSolver:
         assert_type(challenge, Challenge)
 
         nickname = f'[{self.addr2nickname[address]}]'
-        workinfo = self.dict__address__workinginfo[address]
-        workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None, updated_at=time.time())
+        worker_profile = self.wp_by_address[address]
+        worker_profile.job_stats = JobStats(challenge=challenge, tries=0, hashrate=None, updated_at=time.time())
 
         # -------------------------
         # pre compute:
@@ -115,7 +115,7 @@ class AshMaizeSolver:
             # -------------------------
             for _ in range(3):
                 for batch_size in list__batch_size:
-                    solution = self.try_once_with_batch(workinfo=workinfo, preimage_base=preimage_base,
+                    solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base,
                                                         rom=rom, difficulty_value=difficulty_value, batch_size=batch_size,
                                                         is_search=True)
 
@@ -128,16 +128,16 @@ class AshMaizeSolver:
             # -------------------------
             # choose the best batch-size
             # -------------------------
-            avg_by_bs = {bs: (sum(scores) / len(scores)) for bs, scores in workinfo.batch_size_search.items() if scores}
+            avg_by_bs = {bs: (sum(scores) / len(scores)) for bs, scores in worker_profile.batch_size_search.items() if scores}
             best_batch_size = max(avg_by_bs, key=avg_by_bs.get, default=None)
-            workinfo.best_batch_size = best_batch_size
+            worker_profile.best_batch_size = best_batch_size
 
             msg = [
                 f'=== {nickname} Batch-size Search ===',
                 f'address: {address}',
                 f'challenge: {challenge.challenge_id}',
                 f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
-                f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {workinfo.solving_info.tries:,} tries.'
+                f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {worker_profile.job_stats.tries:,} tries.'
                 ]
             self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
 
@@ -155,7 +155,7 @@ class AshMaizeSolver:
                     break
                 # endif
 
-                solution = self.try_once_with_batch(workinfo=workinfo, preimage_base=preimage_base,
+                solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base,
                                                     rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size,
                                                     is_search=False)
 
@@ -166,12 +166,12 @@ class AshMaizeSolver:
 
             return None
         finally:
-            workinfo.clear()
+            worker_profile.clear()
         # endtry
     # enddef
 
     @measure_time
-    def try_once_with_batch(self, workinfo: SolverInfo, preimage_base: str, rom, difficulty_value: int, batch_size: int, is_search: bool) -> Optional[Solution]:
+    def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, rom, difficulty_value: int, batch_size: int, is_search: bool) -> Optional[Solution]:
         assert_type(difficulty_value, int)
         assert_type(batch_size, int)
         assert_type(is_search, bool)
@@ -179,7 +179,7 @@ class AshMaizeSolver:
         # -------------------------
         # prep
         # -------------------------
-        solving_info = workinfo.solving_info
+        job_stats = worker_profile.job_stats
         get_fast_nonce = self.get_fast_nonce
         meets_difficulty = self.meets_difficulty
 
@@ -194,10 +194,10 @@ class AshMaizeSolver:
             if meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
                 nonce_hex = preimages[idx_hash_hex][:16]
 
-                solving_info.tries += (idx_hash_hex + 1)
-                solving_info.updated_at = time.time()
+                job_stats.tries += (idx_hash_hex + 1)
+                job_stats.updated_at = time.time()
 
-                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=workinfo.solving_info.tries)
+                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=worker_profile.job_stats.tries)
             # endif
         # endfor
 
@@ -207,13 +207,13 @@ class AshMaizeSolver:
         # -------------------------
         # save the data
         # -------------------------
-        solving_info.tries += batch_size
-        solving_info.updated_at = time_end
+        job_stats.tries += batch_size
+        job_stats.updated_at = time_end
         hashrate = batch_size / time_elapse
         if is_search:
-            workinfo.batch_size_search[batch_size].append(hashrate)
+            worker_profile.batch_size_search[batch_size].append(hashrate)
         else:
-            solving_info.hashrate = hashrate
+            job_stats.hashrate = hashrate
         # endif
 
         return None

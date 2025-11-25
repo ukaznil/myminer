@@ -26,13 +26,13 @@ class MidnightApp(BaseApp):
 
         # nickname
         self.list__address = self.tracker.get_wallets(None)  # todo: 引数をなくしたい
-        self.addr2nickname = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
+        self.nickname_of_address = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
 
         # pause
         self.address_active_events = dict()  # type: dict[str, threading.Event]
 
         # solver
-        self.solver = AshMaizeSolver(addr2nickname=self.addr2nickname, logger=self.logger)
+        self.solver = AshMaizeSolver(addr2nickname=self.nickname_of_address, logger=self.logger)
     # enddef
 
     # -------------------------
@@ -83,7 +83,7 @@ class MidnightApp(BaseApp):
         sum_receipts = 0
         sum_allocation = 0
         for address in self.list__address:
-            nickname = f'[{self.addr2nickname[address]}]'
+            nickname = f'[{self.nickname_of_address[address]}]'
 
             resp = self.get_statistics(address=address)
             time.sleep(0.1)
@@ -122,7 +122,7 @@ class MidnightApp(BaseApp):
             raise ValueError(f'Given address={address} is not included in registered wallets.')
         # endif
 
-        nickname = f'[{self.addr2nickname[address]}]'
+        nickname = f'[{self.nickname_of_address[address]}]'
         message_to_sign = f'Assign accumulated Scavenger rights to: {to}'
         print_with_time('\n'.join([
             f'{nickname} {address}',
@@ -393,7 +393,7 @@ class MidnightApp(BaseApp):
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        nickname = f'[{self.addr2nickname[address]}]'
+        nickname = f'[{self.nickname_of_address[address]}]'
 
         self.logger.log('\n'.join([
             f'=== {nickname} Start this Challenge ===',
@@ -495,9 +495,9 @@ class MidnightApp(BaseApp):
             ]
         changed = False
 
-        for addr in self.list__address:
-            ev = self.address_active_events[addr]
-            is_active = addr in list_active_address
+        for address in self.list__address:
+            ev = self.address_active_events[address]
+            is_active = address in list_active_address
 
             if is_active and not ev.is_set():
                 ev.set()
@@ -507,7 +507,7 @@ class MidnightApp(BaseApp):
                 changed = True
             # endif
 
-            nickname = f'[{self.addr2nickname[addr]}]'
+            nickname = f'[{self.nickname_of_address[address]}]'
             msg.append(f'{nickname}: {"*active*" if is_active else ""}')
         # endfor
 
@@ -568,16 +568,16 @@ class MidnightApp(BaseApp):
     def show_worklist(self):
         msg = []
         msg.append('=== [W]orklist ===')
-        for idx_addr, address in enumerate(self.list__address):
-            msg.append(f'[{self.addr2nickname[address]}] {address}')
+        for idx_address, address in enumerate(self.list__address):
+            msg.append(f'[{self.nickname_of_address[address]}] {address}')
 
             list__challenge = self.tracker.get_challenges(address=address, list__status=[ss for ss in SolutionStatus if ss != SolutionStatus.Validated])
-            working_info = self.solver.dict__address__workinginfo[address]
-            solving_info = working_info.solving_info
-            if solving_info:
-                challenge_solving = solving_info.challenge
+            worker_profile = self.solver.wp_by_address[address]
+            job_stats = worker_profile.job_stats
+            if job_stats:
+                solving_challenge = job_stats.challenge
             else:
-                challenge_solving = None
+                solving_challenge = None
             # endif
             if len(list__challenge) > 0:
                 for challenge in list__challenge:
@@ -585,11 +585,11 @@ class MidnightApp(BaseApp):
                         f'challenge={challenge.challenge_id}',
                         ]
 
-                    if challenge_solving and challenge.challenge_id == challenge_solving.challenge_id:
+                    if solving_challenge and challenge.challenge_id == solving_challenge.challenge_id:
                         mark = '*'
-                        msg_info.append(f'hashrate={safefstr(solving_info.hashrate, ",.0f")} H/s')
-                        msg_info.append(f'tries={solving_info.tries:,}')
-                        msg_info.append(f'batch_size={safefstr(working_info.best_batch_size, ",")} (at {timestamp_to_str(solving_info.updated_at)})')
+                        msg_info.append(f'hashrate={safefstr(job_stats.hashrate, ",.0f")} H/s')
+                        msg_info.append(f'tries={job_stats.tries:,}')
+                        msg_info.append(f'batch_size={safefstr(worker_profile.best_batch_size, ",")} (at {timestamp_to_str(job_stats.updated_at)})')
                     else:
                         mark = ' '
                     # endif
@@ -617,9 +617,9 @@ class MidnightApp(BaseApp):
                 elif self.project == Project.Defensio:
                     allocation = resp['local']['dfo_allocation'] / 1_000_000
                 # endif
-                msg.append(f'[{self.addr2nickname[address]}] receipts={receipts:,}, allocation={allocation:,}')
+                msg.append(f'[{self.nickname_of_address[address]}] receipts={receipts:,}, allocation={allocation:,}')
             except:
-                msg.append(f'[{self.addr2nickname[address]}] Error')
+                msg.append(f'[{self.nickname_of_address[address]}] Error')
             # endtry
         # endfor
 
