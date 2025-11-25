@@ -211,9 +211,8 @@ class AshMaizeSolver:
         hashrate = batch_size / time_elapse
         if is_search:
             worker_profile.batch_size_search[batch_size].append(hashrate)
-        else:
-            job_stats.hashrate = hashrate
         # endif
+        job_stats.hashrate = hashrate
 
         return None
     # enddef
