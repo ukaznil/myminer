@@ -15,9 +15,9 @@ class LogType(Enum):
     # work
     Worklist = ('10_worklist')
     Statistics = ('11_statistics')
-    Memory_Usage = ('12_memory_usage')
-    Rom_Cache_Status = ('13_rom_cache_status')
-    Threading_Status = ('14_threading_status')
+    System_Metrics = ('12_system_metrics')
+    ROM_Cache_Status = ('13_rom_cache_status')
+    ROM_Cache_Management = ('14_rom_cache_all_cleared')
 
     # main loop
     Fetch_New_Challenge = ('20_fetch_new_challenge')

@@ -1,10 +1,7 @@
-import os
 import sys
 import threading
 import time
 from typing import *
-
-import psutil
 
 from base_app import BaseApp
 from logger import LogType, Logger, measure_time
@@ -14,6 +11,7 @@ from midnight.challenge import Challenge
 from midnight.solution import Solution
 from midnight.tracker import SolutionStatus, Tracker
 from project import Project
+from system_metrics import SystemMetrics
 from utils import assert_type, async_run_func, print_with_time, safefstr, timestamp_to_str
 
 
@@ -76,9 +74,7 @@ class MidnightApp(BaseApp):
 
     @measure_time
     def handle_list_wallets(self):
-        msg = [
-            '=== Wallet List ===',
-            ]
+        msg = ['=== Wallet List ===']
 
         sum_receipts = 0
         sum_allocation = 0
@@ -202,7 +198,6 @@ class MidnightApp(BaseApp):
             last_retrieve_a_new_challenge = 0
             last_show_info = 0
             last_maintain_cache = time.time()
-            last_check_memory = 0
             while self.solver.is_running():
                 now = time.time()
 
@@ -224,12 +219,6 @@ class MidnightApp(BaseApp):
                     async_run_func(self.maintain_rom_cache)
 
                     last_maintain_cache = now
-                # endif
-
-                if now - last_check_memory > 60 * 10:
-                    async_run_func(self.check_memory_usage)
-
-                    last_check_memory = now
                 # endif
 
                 time.sleep(0.5)
@@ -539,6 +528,48 @@ class MidnightApp(BaseApp):
     # enddef
 
     # -------------------------
+    # scheduled commands
+    # -------------------------
+    @measure_time
+    def maintain_rom_cache(self):
+        def memory_stats_str(sm: SystemMetrics) -> list[str]:
+            return [
+                f'memory total   : {sm.memory_total_gb:,.2f} GiB',
+                f'memory used    : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+                f'memory avail.  : {sm.memory_availale_gb:,.2f} Gib',
+                f'memory free    : {sm.memory_free_gb:,.2f} Gib',
+                ]
+        # enddef
+
+        sm = SystemMetrics.init()
+        rom_cache = AshMaizeROMManager.status()
+        rom_cache_size_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
+
+        is_clear_needed = (sm.memory_used_percent > 80) or (sm.memory_available < rom_cache_size_avg)
+
+        msg = ['=== ROM Cache Maintenance ===']
+        msg += memory_stats_str(sm)
+        if is_clear_needed:
+            AshMaizeROMManager.clear_all()
+
+            msg.append(f'-> All ROM caches have been cleared.')
+        else:
+            keys_need = {
+                ch.no_pre_mine
+                for address in self.list__address
+                for ch in self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
+                }
+            keys_drop = {key for key in AshMaizeROMManager.keys() if key not in keys_need}
+            AshMaizeROMManager.drop(*keys_drop)
+
+            msg.append(f'-> Some ROM caches have been cleared.')
+        # endif
+        msg += memory_stats_str(SystemMetrics.init())
+
+        self.logger.log('\n'.join(msg), log_type=LogType.ROM_Cache_Management)
+    # enddef
+
+    # -------------------------
     # interactive commands
     # -------------------------
     @measure_time
@@ -550,24 +581,24 @@ class MidnightApp(BaseApp):
                 async_run_func(self.show_worklist)
             elif cmd == 's':
                 async_run_func(self.show_statistics)
+            elif cmd == 'm':
+                async_run_func(self.show_system_metrics)
             elif cmd == 'r':
                 async_run_func(self.show_rom_cache_status)
-            elif cmd == 't':
-                async_run_func(self.show_threading_status)
             elif cmd == 'q':
                 self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                 self.solver.stop()
                 break
             else:
-                print(f"Invalid command: '{cmd}'. Available: ([W]orklist, [S]tatistics, [R]OM-cache, [T]hreads, [Q]uit)")
+                print(f"Invalid command: '{cmd}'. Available: ([W]ork List, [S]tatistics, System [M]etrics, [R]OM Cache, [Q]uit)")
             # endif
         # endfor
     # enddef
 
     @measure_time
     def show_worklist(self):
-        msg = []
-        msg.append('=== [W]orklist ===')
+        msg = ['=== [W]orklist ===']
+
         for idx_address, address in enumerate(self.list__address):
             msg.append(f'[{self.nickname_of_address[address]}] {address}')
 
@@ -604,8 +635,10 @@ class MidnightApp(BaseApp):
         self.logger.log('\n'.join(msg), log_type=LogType.Worklist)
     # enddef
 
+    @measure_time
     def show_statistics(self):
         msg = [f'=== [S]tatistics ===']
+
         for address in self.list__address:
             try:
                 resp = self.get_statistics(address)
@@ -627,70 +660,70 @@ class MidnightApp(BaseApp):
     # enddef
 
     @measure_time
+    def show_system_metrics(self):
+        sm = SystemMetrics.init()
+
+        msg = [
+            '=== System [M]etrics ===',
+            f'memory total      : {sm.memory_total_gb:,.2f} GiB',
+            f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+            f'memory available  : {sm.memory_availale_gb:,.2f} Gib',
+            f'memory free       : {sm.memory_free_gb:,.2f} Gib',
+            f'CPU usage         : {sm.cpu_usage_percent:.1f} %',
+            f'threads           : {sm.threads_running}',
+            ]
+
+        # CPUクロック
+        if sm.cpu_freq_mhz is not None:
+            msg.append(f'CPU freq          : {sm.cpu_freq_mhz:,.0f} MHz')
+        # endif
+
+        # CPU温度
+        if sm.cpu_temp_c is not None:
+            msg.append(f'CPU temp          : {sm.cpu_temp_c:.1f} °C')
+        # endif
+
+        # GPU使用率
+        if getattr(sm, 'gpu_usage_percent', None) is not None:
+            msg.append(f'GPU usage         : {sm.gpu_usage_percent:.1f} %')
+        # endif
+
+        # GPUメモリ
+        if getattr(sm, 'gpu_mem_used_gb', None) is not None and getattr(sm, 'gpu_mem_total_gb', None) is not None:
+            msg.append(f'GPU memory        : {sm.gpu_mem_used_gb:,.2f} / {sm.gpu_mem_total_gb:,.2f} GiB')
+        # endif
+
+        # GPU温度
+        if getattr(sm, 'gpu_temp_c', None) is not None:
+            msg.append(f'GPU temp          : {sm.gpu_temp_c:.1f} °C')
+        # endif
+
+        # disk
+        if (getattr(sm, 'disk_total', None) is not None) and (getattr(sm, 'disk_used', None) is not None) and (getattr(sm, 'disk_used_percent', None) is not None):
+            disk_total_gb = sm.disk_total / (1024 ** 3)
+            disk_used_gb = sm.disk_used / (1024 ** 3)
+            msg.append(f'disk usage        : {disk_used_gb:,.2f} / {disk_total_gb:,.2f} GiB ({sm.disk_used_percent:.1f} %)')
+        # endif
+
+        # network
+        if getattr(sm, 'net_bytes_sent', None) is not None and getattr(sm, 'net_bytes_recv', None) is not None:
+            sent_mb = sm.net_bytes_sent / (1024 ** 2)
+            recv_mb = sm.net_bytes_recv / (1024 ** 2)
+            msg.append(f'network tx/rx     : {sent_mb:,.2f} / {recv_mb:,.2f} MiB')
+        # endif
+
+        self.logger.log('\n'.join(msg), log_type=LogType.System_Metrics)
+    # enddef
+
+    @measure_time
     def show_rom_cache_status(self):
         rom_cache_info = AshMaizeROMManager.status()
-        size_in_gib = sum(rom_cache_info.values()) / (1024 ** 3)
+        size_gb = sum(rom_cache_info.values()) / (1024 ** 3)
 
         self.logger.log('\n'.join([
             '=== [R]OM Cache Status ===',
-            f'num: {len(rom_cache_info)}',
-            f'size: {size_in_gib:,.2f} GiB',
+            f'num  : {len(rom_cache_info)}',
+            f'used : {size_gb:,.2f} GiB',
             ]
-            ), log_type=LogType.Rom_Cache_Status)
-    # enddef
-
-    @measure_time
-    def maintain_rom_cache(self):
-        list__challenge = []
-        for address in self.list__address:
-            list__challenge += self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
-        # endfor
-
-        AshMaizeROMManager.maintain_rom_cache(list__challenge)
-    # enddef
-
-    @measure_time
-    def check_memory_usage(self):
-        def current_memory_status(vm: NamedTuple) -> list[str]:
-            B_per_GiB = 1024 ** 3
-
-            return [
-                '=== Memory Usage ===',
-                f'total:     {vm.total / B_per_GiB:7,.2f} GiB',
-                f'used:      {vm.used / B_per_GiB:7,.2f} GiB ({vm.percent:.1f} %)',
-                f'available: {vm.available / B_per_GiB:7,.2f} GiB',
-                f'free:      {vm.free / B_per_GiB:7,.2f} GiB',
-                ]
-        # enddef
-
-        rom_cache = AshMaizeROMManager.status()
-        memory_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
-
-        vm = psutil.virtual_memory()
-        release_cache = (vm.percent > 80) or (vm.available < memory_avg)
-
-        msg = current_memory_status(vm)
-        msg.append(f'-> release ROM cache?: {release_cache}')
-        self.logger.log('\n'.join(msg), log_type=LogType.Memory_Usage)
-
-        if release_cache:
-            self.show_rom_cache_status()
-
-            AshMaizeROMManager.clear_all()
-
-            self.logger.log('\n'.join(current_memory_status(psutil.virtual_memory())), log_type=LogType.Memory_Usage)
-        # endif
-    # enddef
-
-    @measure_time
-    def show_threading_status(self):
-        num_cpu = os.cpu_count()
-        num_thread_running = len(threading.enumerate())
-
-        self.logger.log('\n'.join([
-            '=== Threading Status ===',
-            f'CPU num: {num_cpu}',
-            f'running threads: {num_thread_running}'
-            ]
-            ), log_type=LogType.Threading_Status)
+            ), log_type=LogType.ROM_Cache_Status)
     # enddef

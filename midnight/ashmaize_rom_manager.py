@@ -1,6 +1,5 @@
 import threading
 
-from midnight.challenge import Challenge
 from utils import assert_type
 
 try:
@@ -65,14 +64,4 @@ class AshMaizeROMManager:
         with cls._lock:
             return {key: cls.ROM_SIZE for key, rom in cls._cache.items()}
         # endwith
-    # enddef
-
-    @classmethod
-    def maintain_rom_cache(cls, waiting_challenges: list[Challenge]):
-        assert_type(waiting_challenges, list, Challenge)
-
-        set__key_needed = set([ch.no_pre_mine for ch in waiting_challenges])
-        list__key_to_drop = [key for key in AshMaizeROMManager.keys() if key not in set__key_needed]
-
-        cls.drop(*list__key_to_drop)
     # enddef

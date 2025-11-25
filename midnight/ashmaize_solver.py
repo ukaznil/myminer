@@ -52,7 +52,6 @@ class AshMaizeSolver:
         self.random_buffer = bytearray(self.RANDOM_BUFFER_SIZE)
         self.random_buffer_pos = len(self.random_buffer)
         self.preimage_base_cache = dict()
-
     # enddef
 
     # -------------------------
