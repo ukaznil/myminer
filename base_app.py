@@ -9,7 +9,7 @@ class MinerError(Exception):
     pass
 
 
-class BaseMiner:
+class BaseApp:
     base_url: str = NotImplemented
 
     def _get(self, path: str) -> dict:

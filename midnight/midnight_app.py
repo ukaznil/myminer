@@ -6,7 +6,7 @@ from typing import *
 
 import psutil
 
-from base_miner import BaseMiner
+from base_app import BaseApp
 from logger import LogType, Logger, measure_time
 from midnight.ashmaize_rom_manager import AshMaizeROMManager
 from midnight.ashmaize_solver import AshMaizeSolver
@@ -17,7 +17,7 @@ from project import Project
 from utils import assert_type, async_run_func, print_with_time, safefstr
 
 
-class MidNightApp(BaseMiner):
+class MidnightApp(BaseApp):
     def __init__(self, project: Project):
         self.project = project
         self.base_url = self.project.base_url
@@ -72,6 +72,11 @@ class MidNightApp(BaseMiner):
         else:
             print(f'-> Failed to register. address={address}')
         # endif
+    # enddef
+
+    @measure_time
+    def handle_list_wallets(self):
+        pass
     # enddef
 
     @measure_time

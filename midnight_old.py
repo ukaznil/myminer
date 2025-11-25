@@ -8,7 +8,7 @@ import psutil
 
 from ashmaize_rom_manager import AshMaizeROMManager
 from ashmaize_solver import AshMaizeSolver
-from base_miner import BaseMiner
+from base_miner import BaseApp
 from challenge import Challenge
 from logger import LogType, Logger, measure_time
 from project import Project
@@ -17,7 +17,7 @@ from tracker import SolutionStatus, Tracker
 from utils import assert_type, async_run_func, print_with_time, safefstr
 
 
-class MidnightCLI(BaseMiner):
+class MidnightCLI(BaseApp):
     def __init__(self):
         self.parser = argparse.ArgumentParser(
             description='Scavenger Mine CLI client.',
