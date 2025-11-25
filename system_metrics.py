@@ -1,3 +1,4 @@
+import threading
 from dataclasses import dataclass
 from typing import *
 
@@ -14,7 +15,8 @@ class SystemMetrics:
     memory_free: int
 
     # --- Threads / CPU ---
-    threads_running: int  # 全スレッド数
+    threads_num: int  # 全スレッド数
+    threads_running: int  # 走っているスレッド数
     cpu_usage_percent: float  # 全体CPU使用率
     cpu_freq_mhz: Optional[float] = None  # 現在のCPUクロック
 
@@ -65,7 +67,8 @@ class SystemMetrics:
     def init(cls) -> 'SystemMetrics':
         vm = psutil.virtual_memory()
         cpu_percent = psutil.cpu_percent(interval=None)
-        threads_running = psutil.cpu_count()
+        threads_num = psutil.cpu_count()
+        threads_running = len(threading.enumerate())
 
         # CPU 周波数
         cpu_freq = psutil.cpu_freq()
@@ -101,6 +104,7 @@ class SystemMetrics:
             memory_available=vm.available,
             memory_free=vm.free,
             # cpu / threads
+            threads_num=threads_num,
             threads_running=threads_running,
             cpu_usage_percent=cpu_percent,
             cpu_freq_mhz=cpu_freq_mhz,
