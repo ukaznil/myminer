@@ -96,17 +96,20 @@ class MidnightApp(BaseApp):
                 sum_allocation += allocation
             # endif
 
+            is_mine = self.nickname_of_address[donation_address] if donation_address in self.list__address else False
+
             msg.append(f'{nickname}')
-            msg.append(f'- address   : {address}')
-            msg.append(f'- donated_to: {donation_address} (self?: {address == donation_address})')
-            msg.append(f'- receipts: {receipts}')
-            msg.append(f'- allocation: {safefstr(allocation, ",")}')
+            msg.append(f'- address     : {address}')
+            msg.append(f'- donated_to  : {donation_address}')
+            msg.append(f'  - is owned? : {is_mine}' + (' (self)' if address == donation_address else ''))
+            msg.append(f'- receipts    : {receipts}')
+            msg.append(f'- allocation  : {safefstr(allocation, ",")}')
         # endfor
 
         # sum
         msg.append('-' * 21)
-        msg.append(f'- receipts: {sum_receipts:,}')
-        msg.append(f'- allocation: {sum_allocation:,}')
+        msg.append(f'- receipts    : {sum_receipts:,}')
+        msg.append(f'- allocation  : {sum_allocation:,}')
 
         self.logger.log('\n'.join(msg), log_type=LogType.Wallet_List)
     # enddef
@@ -115,6 +118,12 @@ class MidnightApp(BaseApp):
     def handle_donate(self, address: str, to: str):
         assert_type(address, str)
         assert_type(to, str)
+
+        if address == to:
+            print(f'Cannot be donated to itself. Skipped.')
+
+            return
+        # endif
 
         if address not in self.list__address:
             raise ValueError(f'Given address={address} is not included in registered wallets.')
@@ -150,9 +159,9 @@ class MidnightApp(BaseApp):
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {nickname} Donation Error ===',
-                f'address  : {address}',
-                f'donate_to: {to}',
-                f'error: {e}'
+                f'address    : {address}',
+                f'donated_to : {to}',
+                f'error      : {e}'
                 ]), log_type=LogType.Donate_To_Error, sufix=nickname)
         # endtry
     # enddef
@@ -222,7 +231,7 @@ class MidnightApp(BaseApp):
                     last_show_worklist = now
                 # endif
 
-                if now - last_show_hashrate > 60 * 5:
+                if now - last_show_hashrate > 60 * 10:
                     async_run_func(self.show_hashrate)
                     last_show_hashrate = now
                 # endif

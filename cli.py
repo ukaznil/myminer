@@ -149,8 +149,12 @@ def main(argv=None) -> int:
     # endif
 
     handlers = {
+        # wallet
         'register_wallet': handle_register_wallet,
         'list_wallets': handle_list_wallet,
+        'donate': handle_donate,
+        'donate_all': handle_donate_all,
+        # mine
         'mine': handle_mine,
         }
 
