@@ -17,13 +17,14 @@ class SolvingInfo:
     challenge: Challenge
     tries: int
     hashrate: float
+    updated_at: float
 
 
 @dataclass
 class SolverInfo:
     solving_info: Optional[SolvingInfo] = None
     best_batch_size: Optional[int] = None
-    batch_size_search: dict[int, float] = field(default_factory=dict)
+    batch_size_search: dict[int, list[float]] = field(default_factory=lambda: defaultdict(list))
 
     def clear(self):
         self.solving_info = None
@@ -32,23 +33,26 @@ class SolverInfo:
     # enddef
 
 
-RANDOM_BUFFER_SIZE = 65_536
-
-
 class AshMaizeSolver:
+    RANDOM_BUFFER_SIZE = 65_536
+
     def __init__(self, addr2nickname: dict[str, str], logger: Logger):
         self.addr2nickname = addr2nickname
         self.logger = logger
 
+        # -------------------------
+        # event handling
+        # -------------------------
+        self._stop_event = threading.Event()
         self.dict__address__workinginfo = defaultdict(SolverInfo)  # type: dict[str, SolverInfo]
 
+        # -------------------------
         # generate nonces
-        self.random_buffer = bytearray(RANDOM_BUFFER_SIZE)
+        # -------------------------
+        self.random_buffer = bytearray(self.RANDOM_BUFFER_SIZE)
         self.random_buffer_pos = len(self.random_buffer)
         self.preimage_base_cache = dict()
 
-        # event handling
-        self._stop_event = threading.Event()
     # enddef
 
     # -------------------------
@@ -73,80 +77,17 @@ class AshMaizeSolver:
     # -------------------------
     @measure_time
     def solve(self, address: str, challenge: Challenge) -> Optional[Solution]:
-        assert_type(challenge, Challenge)
         assert_type(address, str)
+        assert_type(challenge, Challenge)
 
         nickname = f'[{self.addr2nickname[address]}]'
-
-        rom = AshMaizeROMManager.get_rom(challenge.no_pre_mine)
-        difficulty_value = int(challenge.difficulty[:8], 16)
         workinfo = self.dict__address__workinginfo[address]
-        workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None)
+        workinfo.solving_info = SolvingInfo(challenge=challenge, tries=0, hashrate=None, updated_at=time.time())
 
-        try:
-            list__batch_size = [100, 1_000, 10_000]
-
-            # batch_size search
-            for batch_size in list__batch_size:
-                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=batch_size, is_search=True)
-
-                if solution:
-                    return solution
-                # endif
-            # endfor
-
-            # find the best_batch_size
-            best_batch_size = max(workinfo.batch_size_search, key=workinfo.batch_size_search.get, default=None)
-            workinfo.best_batch_size = best_batch_size
-
-            msg = [
-                f'=== {nickname} Batch-size Search ===',
-                f'address: {address}',
-                f'challenge: {challenge.challenge_id}',
-                f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in workinfo.batch_size_search.items()])}',
-                f'-> best batch-size = {best_batch_size:,}'
-                ]
-            self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
-
-            # mine-loop with the best batch_size
-            while self.is_running():
-                if not challenge.is_valid():
-                    self.logger.log('\n'.join([
-                        f'=== {nickname} Challenge Expired ===',
-                        f'address: {address}',
-                        f'challenge: {challenge.challenge_id}',
-                        ]), log_type=LogType.Challenge_Expired, sufix=nickname)
-
-                    break
-                # endif
-
-                solution = self.try_once_with_batch(address=address, challenge=challenge, rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size, is_search=False)
-
-                if solution:
-                    return solution
-                # endif
-
-                time.sleep(0.5)
-            # endwhile
-
-            return None
-        finally:
-            workinfo.clear()
-        # endtry
-    # enddef
-
-    @measure_time
-    def try_once_with_batch(self, address: str, challenge: Challenge, rom, difficulty_value: int, batch_size: int, is_search: bool) -> Optional[Solution]:
-        assert_type(address, str)
-        assert_type(challenge, Challenge)
-        assert_type(difficulty_value, int)
-        assert_type(batch_size, int)
-        assert_type(is_search, bool)
-
-        if not challenge.is_valid():
-            return None
-        # endif
-
+        # -------------------------
+        # pre compute:
+        # ROM, preimage_base, difficuly_value
+        # -------------------------
         key_cache = (address, challenge.challenge_id)
         preimage_base = self.preimage_base_cache.get(key_cache)
         if preimage_base is None:
@@ -160,13 +101,92 @@ class AshMaizeSolver:
             )
             self.preimage_base_cache[key_cache] = preimage_base
         # endif
+        rom = AshMaizeROMManager.get_rom(challenge.no_pre_mine)
+        difficulty_value = int(challenge.difficulty[:8], 16)
 
-        time_start = time.time()
+        # -------------------------
+        # try to find a solution
+        # -------------------------
+        try:
+            list__batch_size = [100, 500, 1_000, 5_000, 10_000, 50_000]
 
-        # bind functions to local
-        workinfo = self.dict__address__workinginfo[address]
+            # -------------------------
+            # search for the best batch-size
+            # -------------------------
+            for _ in range(3):
+                for batch_size in list__batch_size:
+                    solution = self.try_once_with_batch(workinfo=workinfo, preimage_base=preimage_base,
+                                                        rom=rom, difficulty_value=difficulty_value, batch_size=batch_size,
+                                                        is_search=True)
+
+                    if solution:
+                        return solution
+                    # endif
+                # endfor
+            # endtry
+
+            # -------------------------
+            # choose the best batch-size
+            # -------------------------
+            avg_by_bs = {bs: (sum(scores) / len(scores)) for bs, scores in workinfo.batch_size_search.items() if scores}
+            best_batch_size = max(avg_by_bs, key=avg_by_bs.get, default=None)
+            workinfo.best_batch_size = best_batch_size
+
+            msg = [
+                f'=== {nickname} Batch-size Search ===',
+                f'address: {address}',
+                f'challenge: {challenge.challenge_id}',
+                f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
+                f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {workinfo.solving_info.tries:,} tries.'
+                ]
+            self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
+
+            # -------------------------
+            # find a solution
+            # -------------------------
+            while self.is_running():
+                if not challenge.is_valid():
+                    self.logger.log('\n'.join([
+                        f'=== {nickname} Challenge Expired ===',
+                        f'address: {address}',
+                        f'challenge: {challenge.challenge_id}',
+                        ]), log_type=LogType.Challenge_Expired, sufix=nickname)
+
+                    break
+                # endif
+
+                solution = self.try_once_with_batch(workinfo=workinfo, preimage_base=preimage_base,
+                                                    rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size,
+                                                    is_search=False)
+
+                if solution:
+                    return solution
+                # endif
+            # endwhile
+
+            return None
+        finally:
+            workinfo.clear()
+        # endtry
+    # enddef
+
+    @measure_time
+    def try_once_with_batch(self, workinfo: SolverInfo, preimage_base: str, rom, difficulty_value: int, batch_size: int, is_search: bool) -> Optional[Solution]:
+        assert_type(difficulty_value, int)
+        assert_type(batch_size, int)
+        assert_type(is_search, bool)
+
+        # -------------------------
+        # prep
+        # -------------------------
+        solving_info = workinfo.solving_info
         get_fast_nonce = self.get_fast_nonce
         meets_difficulty = self.meets_difficulty
+
+        # -------------------------
+        # hash compute
+        # -------------------------
+        time_start = time.time()
 
         preimages = [f'{get_fast_nonce():016x}' + preimage_base for _ in range(batch_size)]
         list__hash_hex = rom.hash_batch(preimages)
@@ -174,7 +194,8 @@ class AshMaizeSolver:
             if meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
                 nonce_hex = preimages[idx_hash_hex][:16]
 
-                workinfo.solving_info.tries += (idx_hash_hex + 1)
+                solving_info.tries += (idx_hash_hex + 1)
+                solving_info.updated_at = time.time()
 
                 return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=workinfo.solving_info.tries)
             # endif
@@ -183,13 +204,15 @@ class AshMaizeSolver:
         time_end = time.time()
         time_elapse = time_end - time_start
 
+        # -------------------------
+        # save the data
+        # -------------------------
+        solving_info.tries += batch_size
+        solving_info.updated_at = time_end
         hashrate = batch_size / time_elapse
-
         if is_search:
-            workinfo.batch_size_search[batch_size] = hashrate
+            workinfo.batch_size_search[batch_size].append(hashrate)
         else:
-            solving_info = workinfo.solving_info
-            solving_info.tries += batch_size
             solving_info.hashrate = hashrate
         # endif
 
@@ -211,7 +234,7 @@ class AshMaizeSolver:
         # return random.getrandbits(64)
 
         if self.random_buffer_pos >= len(self.random_buffer):
-            self.random_buffer = bytearray(secrets.token_bytes(RANDOM_BUFFER_SIZE))
+            self.random_buffer = bytearray(secrets.token_bytes(self.RANDOM_BUFFER_SIZE))
             self.random_buffer_pos = 0
         # endif
 

@@ -14,7 +14,7 @@ from midnight.challenge import Challenge
 from midnight.solution import Solution
 from midnight.tracker import SolutionStatus, Tracker
 from project import Project
-from utils import assert_type, async_run_func, print_with_time, safefstr
+from utils import assert_type, async_run_func, print_with_time, safefstr, timestamp_to_str
 
 
 class MidnightApp(BaseApp):
@@ -589,12 +589,12 @@ class MidnightApp(BaseApp):
                         mark = '*'
                         msg_info.append(f'hashrate={safefstr(solving_info.hashrate, ",.0f")} H/s')
                         msg_info.append(f'tries={solving_info.tries:,}')
-                        msg_info.append(f'batch_size={safefstr(working_info.best_batch_size, ",")}')
+                        msg_info.append(f'batch_size={safefstr(working_info.best_batch_size, ",")} (at {timestamp_to_str(solving_info.updated_at)})')
                     else:
                         mark = ' '
                     # endif
 
-                    msg.append(f'- [{mark}] {", ".join(msg_info)}')
+                    msg.append(f'- [{mark}] {" | ".join(msg_info)}')
                 # endfor
             else:
                 msg.append(f'- None')
