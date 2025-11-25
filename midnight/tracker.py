@@ -125,13 +125,8 @@ class Tracker:
     # enddef
 
     @measure_time
-    def get_wallets(self, num: Optional[int]) -> list[str]:
-        assert_type(num, int, allow_none=True)
-
+    def get_wallets(self) -> list[str]:
         wallets = WalletModel.select()
-        if num and num >= 0:
-            wallets = wallets.limit(num)
-        # endif
 
         return [wallet.address for wallet in wallets]
     # enddef

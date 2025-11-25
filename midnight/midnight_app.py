@@ -22,15 +22,13 @@ class MidnightApp(BaseApp):
         self.logger = Logger(project=self.project)
         self.tracker = Tracker(project=self.project, logger=self.logger)
 
-        # nickname
-        self.list__address = self.tracker.get_wallets(None)  # todo: 引数をなくしたい
+        # workers
+        self.list__address = self.tracker.get_wallets()
         self.nickname_of_address = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
-
-        # pause
-        self.address_active_events = dict()  # type: dict[str, threading.Event]
 
         # solver
         self.solver = AshMaizeSolver(addr2nickname=self.nickname_of_address, logger=self.logger)
+        self.address_active_events = dict()  # type: dict[str, threading.Event]
     # enddef
 
     # -------------------------
@@ -489,14 +487,12 @@ class MidnightApp(BaseApp):
             return
         # endif
 
+        msg = [f'=== Active Addresses (<= {num_threads}) ===']
+
         counts = {addr: len(self.tracker.get_challenges(address=addr, list__status=[SolutionStatus.Found, SolutionStatus.Invalid])) for addr in self.list__address}
         list_active_address = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
 
-        msg = [
-            f'=== Active Addresses (<= {num_threads}) ===',
-            ]
         changed = False
-
         for address in self.list__address:
             ev = self.address_active_events[address]
             is_active = address in list_active_address
@@ -554,12 +550,18 @@ class MidnightApp(BaseApp):
                 ]
         # enddef
 
+        # -------------------------
+        # check if ROM caches need to be deleted
+        # -------------------------
         sm = SystemMetrics.init()
         rom_cache = AshMaizeROMManager.status()
         rom_cache_size_avg = (sum(rom_cache.values()) / len(rom_cache)) if rom_cache else 0
 
         is_clear_needed = (sm.memory_used_percent > 80) or (sm.memory_available < rom_cache_size_avg)
 
+        # -------------------------
+        # take an action
+        # -------------------------
         msg = ['=== ROM Cache Maintenance ===']
         msg += memory_stats_str(sm)
         if is_clear_needed:
@@ -625,6 +627,7 @@ class MidnightApp(BaseApp):
             else:
                 solving_challenge = None
             # endif
+
             if len(list__challenge) > 0:
                 for challenge in list__challenge:
                     msg_info = [f'challenge={challenge.challenge_id}']
