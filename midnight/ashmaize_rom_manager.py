@@ -7,7 +7,7 @@ try:
     from midnight import ashmaize_loader
     ashmaize_py = ashmaize_loader.init()
 except ImportError:
-    ashmaize_py = None
+    sys.exit(1)
 
 
 class AshMaizeROMManager:

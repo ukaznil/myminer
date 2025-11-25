@@ -21,6 +21,12 @@ def parse_iso8601_to_utc_naive(s: str) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def timestamp_to_str(ts: float, fmt: str = '%Y/%m/%d %H:%M:%S', tz: str = 'Asia/Tokyo') -> Optional[str]:
+    dt = datetime.fromtimestamp(ts, pytz.timezone(tz))
+
+    return dt.strftime(fmt)
+
+
 def msg_with_time(msg: str, now: Optional[float]) -> str:
     assert_type(msg, str)
 
