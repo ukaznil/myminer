@@ -1,4 +1,5 @@
 import threading
+import time
 from datetime import datetime, timezone
 from typing import *
 
@@ -7,6 +8,9 @@ import pytz
 import constants
 
 
+# -------------------------
+# datetime conversion
+# -------------------------
 def parse_iso8601_to_utc_naive(s: str) -> datetime:
     assert_type(s, str)
 
@@ -21,32 +25,17 @@ def parse_iso8601_to_utc_naive(s: str) -> datetime:
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def timestamp_to_str(ts: float, fmt: str = '%Y/%m/%d %H:%M:%S', tz: str = 'Asia/Tokyo') -> Optional[str]:
+# -------------------------
+# formatting
+# -------------------------
+def timestamp_to_str(ts: float, fmt: str = '%Y/%m/%d %H:%M:%S', tz: str = 'Asia/Tokyo') -> str:
+    assert_type(ts, float)
+    assert_type(fmt, str)
+    assert_type(tz, str)
+
     dt = datetime.fromtimestamp(ts, pytz.timezone(tz))
 
     return dt.strftime(fmt)
-
-
-def msg_with_time(msg: str, now: Optional[float]) -> str:
-    assert_type(msg, str)
-
-    jst = pytz.timezone("Asia/Tokyo")
-    if now is None:
-        now_jst = datetime.now(jst)
-    else:
-        now_jst = datetime.fromtimestamp(now, jst)
-    # enif
-    formatted = now_jst.strftime("%Y/%m/%d %H:%M:%S")
-
-    return f'[{formatted}]\n{msg}\n'
-
-
-def print_with_time(msg: str, now: Optional[float] = None):
-    assert_type(msg, str)
-
-    msg = msg_with_time(msg, now=now)
-
-    print(msg, flush=True)
 
 
 def safefstr(v: Any, fmt: str) -> str:
@@ -59,6 +48,30 @@ def safefstr(v: Any, fmt: str) -> str:
     return f'{v:{fmt}}'
 
 
+# -------------------------
+# printing
+# -------------------------
+def msg_with_time(msg: str, now: Optional[float]) -> str:
+    assert_type(msg, str)
+    assert_type(now, float, allow_none=True)
+
+    dt_str = timestamp_to_str(now if now else time.time())
+
+    return f'[{dt_str}]\n{msg}\n'
+
+
+def print_with_time(msg: str, now: Optional[float] = None):
+    assert_type(msg, str)
+    assert_type(now, float, allow_none=True)
+
+    msg = msg_with_time(msg, now=now)
+
+    print(msg, flush=True)
+
+
+# -------------------------
+# threading
+# -------------------------
 def async_run_func(func):
     threading.Thread(
         target=func,
@@ -66,6 +79,9 @@ def async_run_func(func):
         ).start()
 
 
+# -------------------------
+# assertion
+# -------------------------
 def assert_type(v: Any, _type: type, item_type: Optional[type] = None, allow_none: bool = False):
     if constants.DEBUG:
         _assert_type(v=v, _type=_type, item_type=item_type, allow_none=allow_none)
@@ -77,10 +93,13 @@ def _assert_type(v: Any, _type: type, item_type: Optional[type] = None, allow_no
     if v is None:
         if allow_none:
             return
+        # endif
+
         raise TypeError(
             f"Type assertion failed: "
             f"expected {_type.__name__}, got None"
             )
+    # endif
 
     # 本体の型チェック
     if not isinstance(v, _type):
@@ -89,15 +108,20 @@ def _assert_type(v: Any, _type: type, item_type: Optional[type] = None, allow_no
             f"expected {_type.__name__}, "
             f"got {type(v).__name__} (value={v!r})"
             )
+    # endif
 
     # list / tuple の中身チェック
     if isinstance(v, (list, tuple)) and item_type is not None:
         for i, item in enumerate(v):
             if item is None and allow_none:
                 continue
+            # endif
             if not isinstance(item, item_type):
                 raise TypeError(
                     f"Type assertion failed at index {i}: "
                     f"expected {item_type.__name__}, "
                     f"got {type(item).__name__} (value={item!r})"
                     )
+            # endif
+        # endfor
+    # endif
