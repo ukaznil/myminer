@@ -417,6 +417,15 @@ class MidnightApp(BaseApp):
         is_solutoin_cached = (solution is not None)
         if not is_solutoin_cached:
             solution = self.solver.solve(address=address, challenge=challenge)
+
+            if not challenge.is_valid():
+                self.logger.log('\n'.join([
+                    f'=== {nickname} Challenge Expired ===',
+                    f'address: {address}',
+                    f'challenge: {challenge.challenge_id}',
+                    ]), log_type=LogType.Challenge_Expired, sufix=nickname)
+            # endif
+
             if solution is None:
                 return
             # endif

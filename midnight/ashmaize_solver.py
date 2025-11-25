@@ -114,6 +114,10 @@ class AshMaizeSolver:
             # -------------------------
             for _ in range(3):
                 for batch_size in list__batch_size:
+                    if not challenge.is_valid():
+                        break
+                    # endif
+
                     solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base,
                                                         rom=rom, difficulty_value=difficulty_value, batch_size=batch_size,
                                                         is_search=True)
@@ -145,12 +149,6 @@ class AshMaizeSolver:
             # -------------------------
             while self.is_running():
                 if not challenge.is_valid():
-                    self.logger.log('\n'.join([
-                        f'=== {nickname} Challenge Expired ===',
-                        f'address: {address}',
-                        f'challenge: {challenge.challenge_id}',
-                        ]), log_type=LogType.Challenge_Expired, sufix=nickname)
-
                     break
                 # endif
 
