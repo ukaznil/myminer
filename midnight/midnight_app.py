@@ -807,11 +807,16 @@ class MidnightApp(BaseApp):
                 for ch in self.tracker.get_challenges(address=address, list__status=[SolutionStatus.Invalid])
                 }
             keys_drop = {key for key in AshMaizeROMManager.keys() if key not in keys_need}
-            AshMaizeROMManager.drop(*keys_drop)
 
-            msg.append('-' * 21)
-            msg.append(f'-> {len(keys_drop)} ROM {"cache has" if len(keys_drop) == 1 else "caches have"} been cleared.')
-            msg.append('-' * 21)
+            if keys_drop:
+                AshMaizeROMManager.drop(*keys_drop)
+
+                msg.append('-' * 21)
+                msg.append(f'-> {len(keys_drop)} ROM {"cache has" if len(keys_drop) == 1 else "caches have"} been cleared.')
+                msg.append('-' * 21)
+            else:
+                is_clear_needed = False
+            # endif
         # endif
         msg += memory_stats_str(SystemMetrics.init())
 
