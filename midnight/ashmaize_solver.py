@@ -5,6 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+import numpy as np
+
 from logger import LogType, Logger, measure_time
 from midnight.ashmaize import PyRom
 from midnight.ashmaize_rom_manager import AshMaizeROMManager
@@ -36,7 +38,7 @@ class WorkerProfile:
 
 
 class AshMaizeSolver:
-    RANDOM_BUFFER_SIZE = 65_536
+    RANDOM_BUFFER_SIZE = 1_048_576
 
     def __init__(self, worker_nicknames: dict[str, str], logger: Logger):
         self.worker_nicknames = worker_nicknames
@@ -137,16 +139,16 @@ class AshMaizeSolver:
             # -------------------------
             # choose the best batch-size
             # -------------------------
-            avg_by_bs = {bs: (sum(scores) / len(scores)) for bs, scores in worker_profile.batch_size_search.items() if scores}
-            best_batch_size = max(avg_by_bs, key=avg_by_bs.get, default=None)
-            worker_profile.best_batch_size = best_batch_size
+            ms_by_bs = {bs: (np.mean(scores), np.std(scores)) for bs, scores in worker_profile.batch_size_search.items() if scores}
+            best_bs = max(ms_by_bs, key=lambda bs: ms_by_bs[bs][0] - ms_by_bs[bs][1], default=None)
+            worker_profile.best_batch_size = best_bs
 
             msg = [
                 f'=== {nickname} Batch-size Search ===',
                 f'address   : {address}',
                 f'challenge : {challenge.challenge_id}',
-                f'(bs, hr)  : {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
-                f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {worker_profile.job_stats.tries:,} tries.'
+                f'(bs | hr) : {", ".join([f"({bs:,} | {ms[0]:,.0f}+/-{ms[1]:,.0f} H/s)" for bs, ms in ms_by_bs.items()])}',
+                f'-> best batch-size = {best_bs:,} (~{ms_by_bs[best_bs][0] - ms_by_bs[best_bs][1]:,.0f} H/s) through {worker_profile.job_stats.tries:,} tries.'
                 ]
             self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, suffix=nickname)
 
@@ -159,7 +161,7 @@ class AshMaizeSolver:
                 # endif
 
                 solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base, get_fast_nonce=get_fast_nonce,
-                                                    rom=rom, difficulty_mask=difficulty_mask, batch_size=best_batch_size,
+                                                    rom=rom, difficulty_mask=difficulty_mask, batch_size=best_bs,
                                                     is_search=False)
 
                 if solution:
