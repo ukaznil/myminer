@@ -618,7 +618,8 @@ class MidnightApp(BaseApp):
                         mark = '*'
                         msg_info.append(f'hashrate={safefstr(job_stats.hashrate, ",.0f")} H/s')
                         msg_info.append(f'tries={job_stats.tries:,}')
-                        msg_info.append(f'batch_size={safefstr(worker_profile.best_batch_size, ",")} (at {timestamp_to_str(job_stats.updated_at)})')
+                        msg_info.append(f'batch_size={safefstr(worker_profile.best_batch_size, ",")}')
+                        msg_info.append(f'{timestamp_to_str(job_stats.started_at)} - {timestamp_to_str(job_stats.updated_at)}')
                     else:
                         mark = ' '
                     # endif
@@ -647,13 +648,14 @@ class MidnightApp(BaseApp):
                 solving_challenge = job_stats.challenge
                 hashrate = job_stats.hashrate
                 tries = job_stats.tries
+                started_at = timestamp_to_str(job_stats.started_at)
                 updated_at = timestamp_to_str(job_stats.updated_at)
 
                 if hashrate:
                     list__hashrate.append(hashrate)
                 # endif
 
-                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, "7,.0f")} H/s | {tries:10,.0f} tries (at {updated_at})')
+                msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, "7,.0f")} H/s | {tries:10,.0f} tries | {started_at} - {updated_at}')
             else:
                 msg.append(f'{nickname} Waiting...')
             # endif

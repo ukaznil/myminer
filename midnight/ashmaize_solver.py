@@ -19,6 +19,7 @@ class JobStats:
     challenge: Challenge
     tries: int
     hashrate: float
+    started_at: float
     updated_at: float
 
 
@@ -83,7 +84,8 @@ class AshMaizeSolver:
 
         nickname = f'[{self.addr2nickname[address]}]'
         worker_profile = self.wp_by_address[address]
-        worker_profile.job_stats = JobStats(challenge=challenge, tries=0, hashrate=None, updated_at=time.time())
+        now = time.time()
+        worker_profile.job_stats = JobStats(challenge=challenge, tries=0, hashrate=None, started_at=now, updated_at=now)
 
         # -------------------------
         # pre compute:
