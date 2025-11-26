@@ -612,7 +612,7 @@ class MidnightApp(BaseApp):
 
             if len(list__challenge) > 0:
                 for challenge in list__challenge:
-                    msg_info = [f'challenge={challenge.challenge_id}']
+                    msg_info = [f'challenge={challenge.challenge_id} ({challenge.difficulty})']
 
                     if solving_challenge and challenge.challenge_id == solving_challenge.challenge_id:
                         mark = '*'

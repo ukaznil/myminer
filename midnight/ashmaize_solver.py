@@ -199,7 +199,7 @@ class AshMaizeSolver:
                 job_stats.tries += (idx_hash_hex + 1)
                 job_stats.updated_at = time.time()
 
-                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=worker_profile.job_stats.tries)
+                return Solution(nonce_hex=nonce_hex, hash_hex=hash_hex, tries=job_stats.tries)
             # endif
         # endfor
 
@@ -229,7 +229,5 @@ class AshMaizeSolver:
         nonce_bytes = random_buffer[0][random_buffer_pos[0]:random_buffer_pos[0] + 8]
         random_buffer_pos[0] += 8
 
-        nonce = int.from_bytes(nonce_bytes, 'big')
-
-        return nonce
+        return int.from_bytes(nonce_bytes, 'big')
     # enddef
