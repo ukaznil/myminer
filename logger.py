@@ -56,7 +56,7 @@ class Logger:
         os.makedirs(self.log_dirname, exist_ok=True)
     # enddef
 
-    def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None, stdout: bool = True):
+    def log(self, msg: str, log_type: LogType, suffix: str = None, now: float = None, stdout: bool = True):
         assert_type(log_type, LogType)
         assert_type(msg, str)
         assert_type(now, float, allow_none=True)
@@ -64,7 +64,7 @@ class Logger:
         msg = msg_with_time(msg, now=now)
 
         filepath = os.path.join(self.log_dirname,
-                                f'{log_type.shortname}' + (f'_{sufix}' if sufix else '') + '.log')
+                                f'{log_type.shortname}' + (f'_{suffix}' if suffix else '') + '.log')
         with open(filepath, 'wt') as f:
             f.write(msg)
             f.flush()
@@ -93,7 +93,7 @@ def measure_time(func):
                 msg = f'[{funcname}] took {elapsed:.1f} sec'
 
                 logger = self.logger  # type: Logger
-                logger.log(msg, log_type=LogType.Func_Time_Measure, sufix=funcname, now=end)
+                logger.log(msg, log_type=LogType.Func_Time_Measure, suffix=funcname, now=end)
             # endif
         # endtry
     return wrapper

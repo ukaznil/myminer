@@ -45,7 +45,7 @@ class SystemMetrics:
     # enddef
 
     @property
-    def memory_availale_gb(self) -> float:
+    def memory_available_gb(self) -> float:
         return self.memory_available / (1024 ** 3)
     # enddef
 

@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(
         dest='command',
         required=True,
-        help='Top level command to run.',
+        help='Top-level command to run.',
         )
 
     # -------------------------
@@ -27,13 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
     # -------------------------
     wallet_parser = subparsers.add_parser(
         'wallet',
-        description='Wallet related commands.',
+        description='Wallet-related commands.',
         help='Manage wallet addresses.',
         )
     wallet_subparsers = wallet_parser.add_subparsers(
         dest='wallet_command',
         required=True,
-        help='Wallet sub commands.',
+        help='Wallet subcommands.',
         )
 
     # wallet register -a ...

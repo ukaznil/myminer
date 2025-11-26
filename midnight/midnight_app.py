@@ -155,14 +155,14 @@ class MidnightApp(BaseApp):
                 msg.append(f'-> Donation Invalid. code={status_code}, error={error}, message={message}')
             # endif
 
-            self.logger.log('\n'.join(msg), log_type=LogType.Donate_To, sufix=nickname)
+            self.logger.log('\n'.join(msg), log_type=LogType.Donate_To, suffix=nickname)
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {nickname} Donation Error ===',
                 f'address    : {address}',
                 f'donated_to : {to}',
                 f'error      : {e}'
-                ]), log_type=LogType.Donate_To_Error, sufix=nickname)
+                ]), log_type=LogType.Donate_To_Error, suffix=nickname)
         # endtry
     # enddef
 
@@ -407,14 +407,14 @@ class MidnightApp(BaseApp):
             f'=== {nickname} Start this Challenge ===',
             f'address: {address}',
             f'{challenge}',
-            ]), log_type=LogType.Start_New_Challenge, sufix=nickname)
+            ]), log_type=LogType.Start_New_Challenge, suffix=nickname)
 
         # -------------------------
         # Find a solution
         # -------------------------
         solution = self.tracker.get_found_solution(address=address, challenge=challenge)
-        is_solutoin_cached = (solution is not None)
-        if not is_solutoin_cached:
+        is_solution_cached = (solution is not None)
+        if not is_solution_cached:
             solution = self.solver.solve(address=address, challenge=challenge)
 
             if not challenge.is_valid():
@@ -422,7 +422,7 @@ class MidnightApp(BaseApp):
                     f'=== {nickname} Challenge Expired ===',
                     f'address   : {address}',
                     f'challenge : {challenge.challenge_id}',
-                    ]), log_type=LogType.Challenge_Expired, sufix=nickname)
+                    ]), log_type=LogType.Challenge_Expired, suffix=nickname)
             # endif
 
             if solution is None:
@@ -432,12 +432,25 @@ class MidnightApp(BaseApp):
             self.tracker.add_solution_found(address=address, challenge=challenge, solution=solution)
         # endif
 
-        self.logger.log('\n'.join([
-            f'=== {nickname} {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
-            f'address   : {address}',
-            f'challenge : {challenge.challenge_id}',
-            f'solution  : {solution}',
-            ]), log_type=LogType.Solution_Found, sufix=nickname)
+        msg = []
+        if not is_solution_cached:
+            msg.append(
+                '------------------------------------------------------------------------------------------------\n'
+                '| #####  #####  #      #   #  #####  #####  #####  #   #     #####  #####  #   #  #   #  ####  |\n'
+                '| #      #   #  #      #   #    #      #    #   #  ##  #     #      #   #  #   #  ##  #  #   # |\n'
+                '| #      #   #  #      #   #    #      #    #   #  # # #     #      #   #  #   #  # # #  #   # |\n'
+                '| #####  #   #  #      #   #    #      #    #   #  #  ##     #####  #   #  #   #  #  ##  #   # |\n'
+                '|     #  #   #  #      #   #    #      #    #   #  #   #     #      #   #  #   #  #   #  #   # |\n'
+                '|     #  #   #  #      #   #    #      #    #   #  #   #     #      #   #  #   #  #   #  #   # |\n'
+                '| #####  #####  #####  #####    #    #####  #####  #   #     #      #####  #####  #   #  ####  |\n'
+                '------------------------------------------------------------------------------------------------'
+                )
+        # endif
+        msg.append(f'=== {nickname} {"Cached Solution" if is_solution_cached else "Solution"} Found ===', )
+        msg.append(f'address   : {address}', )
+        msg.append(f'challenge : {challenge.challenge_id}', )
+        msg.append(f'solution  : {solution}', )
+        self.logger.log('\n'.join(msg), log_type=LogType.Solution_Found, suffix=nickname)
 
         if not self.solver.is_running():
             return
@@ -466,7 +479,7 @@ class MidnightApp(BaseApp):
                 msg.append(f'-> Solution Invalid. code={code}, message={message}')
             # endif
 
-            self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, sufix=nickname)
+            self.logger.log('\n'.join(msg), log_type=LogType.Solution_Submission, suffix=nickname)
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {nickname} Solution Submission Error ===',
@@ -474,7 +487,7 @@ class MidnightApp(BaseApp):
                 f'challenge : {challenge.challenge_id}',
                 f'solution  : {solution}',
                 f'error     : {e}'
-                ]), log_type=LogType.Solution_Submission_Error, sufix=nickname)
+                ]), log_type=LogType.Solution_Submission_Error, suffix=nickname)
 
             time.sleep(1)
 
@@ -692,7 +705,7 @@ class MidnightApp(BaseApp):
             '=== System [M]etrics ===',
             f'memory total     : {sm.memory_total_gb:,.2f} GiB',
             f'memory used      : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-            f'memory available : {sm.memory_availale_gb:,.2f} GiB',
+            f'memory available : {sm.memory_available_gb:,.2f} GiB',
             f'memory free      : {sm.memory_free_gb:,.2f} GiB',
             f'CPU num          : {sm.cpu_num} ({sm.threads_running} threads running)',
             f'CPU usage        : {sm.cpu_usage_percent:.1f} %',
@@ -762,7 +775,7 @@ class MidnightApp(BaseApp):
             return [
                 f'memory total     : {sm.memory_total_gb:,.2f} GiB',
                 f'memory used      : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-                f'memory available : {sm.memory_availale_gb:,.2f} GiB',
+                f'memory available : {sm.memory_available_gb:,.2f} GiB',
                 f'memory free      : {sm.memory_free_gb:,.2f} GiB',
                 ]
         # enddef
@@ -795,7 +808,7 @@ class MidnightApp(BaseApp):
             AshMaizeROMManager.drop(*keys_drop)
 
             msg.append('-' * 21)
-            msg.append(f'-> {len(keys_drop)} ROM caches have been cleared.')
+            msg.append(f'-> {len(keys_drop)} ROM {"cache has" if len(keys_drop) == 1 else "caches have"} been cleared.')
             msg.append('-' * 21)
         # endif
         msg += memory_stats_str(SystemMetrics.init())

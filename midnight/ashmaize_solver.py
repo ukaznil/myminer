@@ -145,7 +145,7 @@ class AshMaizeSolver:
                 f'(bs, hr)  : {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
                 f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {worker_profile.job_stats.tries:,} tries.'
                 ]
-            self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
+            self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, suffix=nickname)
 
             # -------------------------
             # find a solution
