@@ -606,18 +606,20 @@ class MidnightApp(BaseApp):
                 async_run_func(self.show_worklist)
             elif cmd == 'h':
                 async_run_func(self.show_hashrate)
+            elif cmd == 'r':
+                async_run_func(self.show_results)
             elif cmd == 's':
                 async_run_func(self.show_statistics)
             elif cmd == 'm':
                 async_run_func(self.show_system_metrics)
-            elif cmd == 'r':
+            elif cmd == 'c':
                 async_run_func(self.show_rom_cache_status)
             elif cmd == 'q':
                 self.logger.log('=== Stopping miner... ===', log_type=LogType.System)
                 self.solver.stop()
                 break
             else:
-                print(f"Invalid command: '{cmd}'. Available: [W]orklist | [H]ashrate | [S]tatistics | System [M]etrics | [R]OM Cache | [Q]uit")
+                print(f"Invalid command: '{cmd}'. Available: [W]orklist | [H]ashrate | [R]esults | [S]tatistics | System [M]etrics | ROM [C]ache | [Q]uit")
             # endif
         # endfor
     # enddef
