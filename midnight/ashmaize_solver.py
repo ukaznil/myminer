@@ -5,9 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from midnight.pyrom import PyRom
-
 from logger import LogType, Logger, measure_time
+from midnight.ashmaize import PyRom
 from midnight.ashmaize_rom_manager import AshMaizeROMManager
 from midnight.challenge import Challenge
 from midnight.solution import Solution
