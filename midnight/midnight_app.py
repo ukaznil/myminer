@@ -404,8 +404,8 @@ class MidnightApp(BaseApp):
         nickname = f'[{self.worker_nicknames[address]}]'
 
         self.logger.log('\n'.join([
-            f'=== {nickname} Start this Challenge ===',
-            f'address       : {address}',
+            f'=== {nickname} Start New Challenge ===',
+            f'address           : {address}',
             f'{challenge}',
             ]), log_type=LogType.Start_New_Challenge, suffix=nickname)
 

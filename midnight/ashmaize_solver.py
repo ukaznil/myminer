@@ -176,6 +176,8 @@ class AshMaizeSolver:
     @measure_time
     def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, get_fast_nonce: Callable[[], int],
                             rom: PyRom, difficulty_mask: int, batch_size: int, is_search: bool) -> Optional[Solution]:
+        assert_type(worker_profile, WorkerProfile)
+        assert_type(preimage_base, str)
         assert_type(difficulty_mask, int)
         assert_type(batch_size, int)
         assert_type(is_search, bool)
@@ -209,13 +211,13 @@ class AshMaizeSolver:
         # -------------------------
         # save the data
         # -------------------------
-        job_stats.tries += batch_size
-        job_stats.updated_at = time_end
         hashrate = batch_size / time_elapse
         if is_search:
             worker_profile.batch_size_search[batch_size].append(hashrate)
         # endif
         job_stats.hashrate = hashrate
+        job_stats.tries += batch_size
+        job_stats.updated_at = time_end
 
         return None
     # enddef
