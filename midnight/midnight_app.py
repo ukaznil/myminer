@@ -641,6 +641,8 @@ class MidnightApp(BaseApp):
                 # endif
 
                 msg.append(f'{nickname} challenge={solving_challenge.challenge_id} | {safefstr(hashrate, "7,.0f")} H/s | {tries:10,.0f} tries (at {updated_at})')
+            else:
+                msg.append(f'{nickname} Waiting...')
             # endif
         # endfor
 
