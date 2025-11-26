@@ -221,7 +221,7 @@ class MidnightApp(BaseApp):
             while self.solver.is_running():
                 now = time.time()
 
-                if now - last_retrieve_new_challenge > 60 * 2:
+                if now - last_retrieve_new_challenge > 60 * 1:
                     async_run_func(self.retrieve_new_challenge)
                     last_retrieve_new_challenge = now
                 # endif
@@ -356,8 +356,7 @@ class MidnightApp(BaseApp):
             self.logger.log('\n'.join([
                 f'=== Fetch a new Challenge: Error ===',
                 f'error: {e}'
-                ]), log_type=LogType.Fetch_New_Challenge_Error)
-            time.sleep(5)
+                ]), log_type=LogType.Fetch_New_Challenge_Error, stdout=False)
 
             return
         # endtry
@@ -421,8 +420,8 @@ class MidnightApp(BaseApp):
             if not challenge.is_valid():
                 self.logger.log('\n'.join([
                     f'=== {nickname} Challenge Expired ===',
-                    f'address: {address}',
-                    f'challenge: {challenge.challenge_id}',
+                    f'address   : {address}',
+                    f'challenge : {challenge.challenge_id}',
                     ]), log_type=LogType.Challenge_Expired, sufix=nickname)
             # endif
 
@@ -435,9 +434,9 @@ class MidnightApp(BaseApp):
 
         self.logger.log('\n'.join([
             f'=== {nickname} {"Cached-solution" if is_solutoin_cached else "Solution"} Found ===',
-            f'address: {address}',
-            f'challenge: {challenge.challenge_id}',
-            f'solution: {solution}',
+            f'address   : {address}',
+            f'challenge : {challenge.challenge_id}',
+            f'solution  : {solution}',
             ]), log_type=LogType.Solution_Found, sufix=nickname)
 
         if not self.solver.is_running():
@@ -471,10 +470,10 @@ class MidnightApp(BaseApp):
         except Exception as e:
             self.logger.log('\n'.join([
                 f'=== {nickname} Solution Submission Error ===',
-                f'address: {address}',
-                f'challenge: {challenge.challenge_id}',
-                f'solution: {solution}',
-                f'error: {e}'
+                f'address   : {address}',
+                f'challenge : {challenge.challenge_id}',
+                f'solution  : {solution}',
+                f'error     : {e}'
                 ]), log_type=LogType.Solution_Submission_Error, sufix=nickname)
 
             time.sleep(1)
@@ -544,7 +543,7 @@ class MidnightApp(BaseApp):
             challenge = self.tracker.get_oldest_unsolved_challenge(address)
 
             if challenge is None:
-                time.sleep(60)
+                time.sleep(10)
             else:
                 self.solve_challenge(address=address, challenge=challenge)
                 self.set_active_addresses(num_threads=num_threads)
@@ -689,51 +688,51 @@ class MidnightApp(BaseApp):
 
         msg = [
             '=== System [M]etrics ===',
-            f'memory total      : {sm.memory_total_gb:,.2f} GiB',
-            f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-            f'memory available  : {sm.memory_availale_gb:,.2f} GiB',
-            f'memory free       : {sm.memory_free_gb:,.2f} GiB',
-            f'CPU num           : {sm.cpu_num} ({sm.threads_running} threads running)',
-            f'CPU usage         : {sm.cpu_usage_percent:.1f} %',
+            f'memory total     : {sm.memory_total_gb:,.2f} GiB',
+            f'memory used      : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+            f'memory available : {sm.memory_availale_gb:,.2f} GiB',
+            f'memory free      : {sm.memory_free_gb:,.2f} GiB',
+            f'CPU num          : {sm.cpu_num} ({sm.threads_running} threads running)',
+            f'CPU usage        : {sm.cpu_usage_percent:.1f} %',
             ]
 
         # CPUクロック
         if sm.cpu_freq_mhz is not None:
-            msg.append(f'CPU freq          : {sm.cpu_freq_mhz:,.0f} MHz')
+            msg.append(f'CPU freq         : {sm.cpu_freq_mhz:,.0f} MHz')
         # endif
 
         # CPU温度
         if sm.cpu_temp_c is not None:
-            msg.append(f'CPU temp          : {sm.cpu_temp_c:.1f} °C')
+            msg.append(f'CPU temp         : {sm.cpu_temp_c:.1f} °C')
         # endif
 
         # GPU使用率
         if getattr(sm, 'gpu_usage_percent', None) is not None:
-            msg.append(f'GPU usage         : {sm.gpu_usage_percent:.1f} %')
+            msg.append(f'GPU usage        : {sm.gpu_usage_percent:.1f} %')
         # endif
 
         # GPUメモリ
         if getattr(sm, 'gpu_mem_used_gb', None) is not None and getattr(sm, 'gpu_mem_total_gb', None) is not None:
-            msg.append(f'GPU memory        : {sm.gpu_mem_used_gb:,.2f} / {sm.gpu_mem_total_gb:,.2f} GiB')
+            msg.append(f'GPU memory       : {sm.gpu_mem_used_gb:,.2f} / {sm.gpu_mem_total_gb:,.2f} GiB')
         # endif
 
         # GPU温度
         if getattr(sm, 'gpu_temp_c', None) is not None:
-            msg.append(f'GPU temp          : {sm.gpu_temp_c:.1f} °C')
+            msg.append(f'GPU temp         : {sm.gpu_temp_c:.1f} °C')
         # endif
 
         # disk
         if (getattr(sm, 'disk_total', None) is not None) and (getattr(sm, 'disk_used', None) is not None) and (getattr(sm, 'disk_used_percent', None) is not None):
             disk_total_gb = sm.disk_total / (1024 ** 3)
             disk_used_gb = sm.disk_used / (1024 ** 3)
-            msg.append(f'disk usage        : {disk_used_gb:,.2f} / {disk_total_gb:,.2f} GiB ({sm.disk_used_percent:.1f} %)')
+            msg.append(f'disk usage       : {disk_used_gb:,.2f} / {disk_total_gb:,.2f} GiB ({sm.disk_used_percent:.1f} %)')
         # endif
 
         # network
         if getattr(sm, 'net_bytes_sent', None) is not None and getattr(sm, 'net_bytes_recv', None) is not None:
             sent_mb = sm.net_bytes_sent / (1024 ** 2)
             recv_mb = sm.net_bytes_recv / (1024 ** 2)
-            msg.append(f'network tx/rx     : {sent_mb:,.2f} / {recv_mb:,.2f} MiB')
+            msg.append(f'network tx/rx    : {sent_mb:,.2f} / {recv_mb:,.2f} MiB')
         # endif
 
         self.logger.log('\n'.join(msg), log_type=LogType.System_Metrics)
@@ -759,10 +758,10 @@ class MidnightApp(BaseApp):
     def maintain_rom_cache(self):
         def memory_stats_str(sm: SystemMetrics) -> list[str]:
             return [
-                f'memory total      : {sm.memory_total_gb:,.2f} GiB',
-                f'memory used       : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
-                f'memory available  : {sm.memory_availale_gb:,.2f} GiB',
-                f'memory free       : {sm.memory_free_gb:,.2f} GiB',
+                f'memory total     : {sm.memory_total_gb:,.2f} GiB',
+                f'memory used      : {sm.memory_used_gb:,.2f} GiB ({sm.memory_used_percent:.1f} %)',
+                f'memory available : {sm.memory_availale_gb:,.2f} GiB',
+                f'memory free      : {sm.memory_free_gb:,.2f} GiB',
                 ]
         # enddef
 

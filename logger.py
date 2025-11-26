@@ -56,7 +56,7 @@ class Logger:
         os.makedirs(self.log_dirname, exist_ok=True)
     # enddef
 
-    def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None):
+    def log(self, msg: str, log_type: LogType, sufix: str = None, now: float = None, stdout: bool = True):
         assert_type(log_type, LogType)
         assert_type(msg, str)
         assert_type(now, float, allow_none=True)
@@ -70,7 +70,9 @@ class Logger:
             f.flush()
         # endwith
 
-        print(msg, flush=True)
+        if stdout:
+            print(msg, flush=True)
+        # endif
     # enddef
 
 
