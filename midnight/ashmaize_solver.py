@@ -3,7 +3,7 @@ import threading
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Callable, Optional
 
 from logger import LogType, Logger, measure_time
 from midnight.ashmaize_rom_manager import AshMaizeROMManager
@@ -49,8 +49,8 @@ class AshMaizeSolver:
         # -------------------------
         # generate nonces
         # -------------------------
-        self.random_buffer = bytearray(self.RANDOM_BUFFER_SIZE)
-        self.random_buffer_pos = len(self.random_buffer)
+        self.rb_by_address = {address: [bytearray(self.RANDOM_BUFFER_SIZE)] for address in addr2nickname.keys()}  # type: dict[str, list[bytearray]]
+        self.rbpos_by_address = {address: [len(self.rb_by_address[address][0])] for address in addr2nickname.keys()}  # type: dict[str, list[int]]
         self.preimage_base_cache = dict()
     # enddef
 
@@ -101,7 +101,10 @@ class AshMaizeSolver:
             self.preimage_base_cache[key_cache] = preimage_base
         # endif
         rom = AshMaizeROMManager.get_rom(challenge.no_pre_mine)
+        get_fast_nonce = lambda: self.get_fast_nonce(random_buffer=self.rb_by_address[address],
+                                                     random_buffer_pos=self.rbpos_by_address[address])
         difficulty_value = int(challenge.difficulty[:8], 16)
+        difficulty_mask = ~difficulty_value & 0xffffffff
 
         # -------------------------
         # try to find a solution
@@ -118,8 +121,8 @@ class AshMaizeSolver:
                         break
                     # endif
 
-                    solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base,
-                                                        rom=rom, difficulty_value=difficulty_value, batch_size=batch_size,
+                    solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base, get_fast_nonce=get_fast_nonce,
+                                                        rom=rom, difficulty_mask=difficulty_mask, batch_size=batch_size,
                                                         is_search=True)
 
                     if solution:
@@ -137,9 +140,9 @@ class AshMaizeSolver:
 
             msg = [
                 f'=== {nickname} Batch-size Search ===',
-                f'address: {address}',
-                f'challenge: {challenge.challenge_id}',
-                f'(batch-size, hashrate): {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
+                f'address   : {address}',
+                f'challenge : {challenge.challenge_id}',
+                f'(bs, hr)  : {", ".join([f"({bs:,}, {hr:,.0f} H/s)" for bs, hr in avg_by_bs.items()])}',
                 f'-> best batch-size = {best_batch_size:,} (~{avg_by_bs[best_batch_size]:,.0f} H/s) through {worker_profile.job_stats.tries:,} tries.'
                 ]
             self.logger.log('\n'.join(msg), log_type=LogType.Batch_Size_Search, sufix=nickname)
@@ -152,8 +155,8 @@ class AshMaizeSolver:
                     break
                 # endif
 
-                solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base,
-                                                    rom=rom, difficulty_value=difficulty_value, batch_size=best_batch_size,
+                solution = self.try_once_with_batch(worker_profile=worker_profile, preimage_base=preimage_base, get_fast_nonce=get_fast_nonce,
+                                                    rom=rom, difficulty_mask=difficulty_mask, batch_size=best_batch_size,
                                                     is_search=False)
 
                 if solution:
@@ -168,8 +171,9 @@ class AshMaizeSolver:
     # enddef
 
     @measure_time
-    def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, rom, difficulty_value: int, batch_size: int, is_search: bool) -> Optional[Solution]:
-        assert_type(difficulty_value, int)
+    def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, get_fast_nonce: Callable[None, int],
+                            rom, difficulty_mask: int, batch_size: int, is_search: bool) -> Optional[Solution]:
+        assert_type(difficulty_mask, int)
         assert_type(batch_size, int)
         assert_type(is_search, bool)
 
@@ -177,18 +181,16 @@ class AshMaizeSolver:
         # prep
         # -------------------------
         job_stats = worker_profile.job_stats
-        get_fast_nonce = self.get_fast_nonce
-        meets_difficulty = self.meets_difficulty
 
         # -------------------------
         # hash compute
         # -------------------------
         time_start = time.time()
 
-        preimages = [f'{get_fast_nonce():016x}' + preimage_base for _ in range(batch_size)]
+        preimages = [('%016x' % get_fast_nonce()) + preimage_base for _ in range(batch_size)]
         list__hash_hex = rom.hash_batch(preimages)
         for idx_hash_hex, hash_hex in enumerate(list__hash_hex):
-            if meets_difficulty(hash_hex=hash_hex, difficulty_value=difficulty_value):
+            if (int(hash_hex[:8], 16) & difficulty_mask) == 0:
                 nonce_hex = preimages[idx_hash_hex][:16]
 
                 job_stats.tries += (idx_hash_hex + 1)
@@ -215,27 +217,15 @@ class AshMaizeSolver:
         return None
     # enddef
 
-    @staticmethod
-    def meets_difficulty(hash_hex: str, difficulty_value: int) -> bool:
-        assert_type(hash_hex, str)
-        assert_type(difficulty_value, int)
-
-        hash_value = int(hash_hex[:8], 16)
-
-        return (hash_value | difficulty_value) == difficulty_value
-    # enddef
-
-    def get_fast_nonce(self) -> int:
-        # return secrets.randbits(64)
-        # return random.getrandbits(64)
-
-        if self.random_buffer_pos >= len(self.random_buffer):
-            self.random_buffer = bytearray(secrets.token_bytes(self.RANDOM_BUFFER_SIZE))
-            self.random_buffer_pos = 0
+    def get_fast_nonce(self, random_buffer: list[bytearray], random_buffer_pos: list[int]) -> int:
+        if random_buffer_pos[0] >= len(random_buffer[0]):
+            random_buffer[0] = bytearray(secrets.token_bytes(self.RANDOM_BUFFER_SIZE))
+            random_buffer_pos[0] = 0
         # endif
 
-        nonce_bytes = self.random_buffer[self.random_buffer_pos:self.random_buffer_pos + 8]
-        self.random_buffer_pos += 8
+        nonce_bytes = random_buffer[0][random_buffer_pos[0]:random_buffer_pos[0] + 8]
+        random_buffer_pos[0] += 8
+
         nonce = int.from_bytes(nonce_bytes, 'big')
 
         return nonce
