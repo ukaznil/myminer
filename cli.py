@@ -93,6 +93,16 @@ def build_parser() -> argparse.ArgumentParser:
     wallet_list_parser.set_defaults(handler='list_wallets')
 
     # -------------------------
+    # results sub-command
+    # -------------------------
+    results_parser = subparsers.add_parser(
+        'results',
+        description='xxx',
+        help='xxx',
+        )
+    results_parser.set_defaults(handler='show_results')
+
+    # -------------------------
     # mine sub-command
     # -------------------------
     mine_parser = subparsers.add_parser(
@@ -129,6 +139,10 @@ def handle_donate_all(app: BaseApp, args: argparse.Namespace) -> None:
     app.handle_donate_all(to=args.donate_to)
 
 
+def handle_show_results(app: BaseApp, args: argparse.Namespace) -> None:
+    app.handle_show_results()
+
+
 def handle_mine(app: BaseApp, args: argparse.Namespace) -> None:
     app.handle_mine(num_threads=args.num_threads)
 
@@ -152,8 +166,11 @@ def main(argv=None) -> int:
         # wallet
         'register_wallet': handle_register_wallet,
         'list_wallets': handle_list_wallet,
+        # donate
         'donate': handle_donate,
         'donate_all': handle_donate_all,
+        # show results
+        'show_results': handle_show_results,
         # mine
         'mine': handle_mine,
         }

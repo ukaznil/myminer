@@ -215,6 +215,33 @@ class Tracker:
     # enddef
 
     @measure_time
+    def get_all_challenges(self) -> list[Challenge]:
+        return [Challenge.from_challenge_model(cm) for cm in ChallengeModel.select()]
+    # enddef
+
+    @measure_time
+    def get_solution_status(self, address: str, challenge: Challenge) -> Optional[SolutionStatus]:
+        assert_type(address, str)
+        assert_type(challenge, Challenge)
+
+        sm = (
+            SolutionModel
+            .select()
+            .where(
+                (SolutionModel.address == address) &
+                (SolutionModel.challenge_id == challenge.challenge_id)
+                )
+            .first()
+        )  # type: SolutionModel
+
+        if sm:
+            return SolutionStatus(int(sm.status))
+        else:
+            return None
+        # endif
+    # enddef
+
+    @measure_time
     def get_oldest_unsolved_challenge(self, address: str) -> Optional[Challenge]:
         assert_type(address, str)
 
@@ -285,7 +312,8 @@ class Tracker:
                 (SolutionModel.challenge_id == challenge.challenge_id) &
                 (SolutionModel.status == SolutionStatus.Found.value)
                 )
-            .first())  # type: SolutionModel
+            .first()
+        )  # type: Optional[SolutionModel]
 
         if sm:
             return Solution(nonce_hex=sm.nonce_hex, hash_hex=sm.hash_hex, tries=sm.tries)

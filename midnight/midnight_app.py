@@ -122,6 +122,31 @@ class MidnightApp(BaseApp):
     # enddef
 
     @measure_time
+    def handle_show_results(self):
+        msg = ['=== Mining Results ===']
+
+        list__challenge = self.tracker.get_all_challenges()
+        sum_num_validted = 0
+        for challenge in list__challenge:
+            num_validated = 0
+            for address in self.list__address:
+                ss = self.tracker.get_solution_status(address=address, challenge=challenge)
+
+                if ss and ss == SolutionStatus.Validated:
+                    num_validated += 1
+                # endif
+            # endfor
+            sum_num_validted += num_validated
+
+            msg.append(f'{challenge.challenge_id} ({challenge.difficulty}): {"*" * num_validated}')
+        # endfor
+        msg.append(f'-' * 21)
+        msg.append(f'sum: {sum_num_validted}')
+
+        print_with_time('\n'.join(msg))
+    # enddef
+
+    @measure_time
     def handle_donate(self, address: str, to: str):
         assert_type(address, str)
         assert_type(to, str)
