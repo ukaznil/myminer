@@ -50,11 +50,11 @@ class Challenge:
     # enddef
 
     def __repr__(self) -> str:
-        return '\n'.join([f'challenge_id:       {self.challenge_id}',
-                          f'day/ch#:            {self.day}/{self.challenge_number}',
-                          f'difficulty (hex):   {self.difficulty}',
-                          f'no_pre_mine:        {self.no_pre_mine}',
-                          f'no_pre_mine_hour:   {self.no_pre_mine_hour}',
-                          f'latest_submission:  {self.latest_submission}',
+        return '\n'.join([f'challenge_id      : {self.challenge_id}',
+                          f'day/ch#           : {self.day}/{self.challenge_number}',
+                          f'difficulty (hex)  : {self.difficulty}',
+                          f'no_pre_mine       : {self.no_pre_mine}',
+                          f'no_pre_mine_hour  : {self.no_pre_mine_hour}',
+                          f'latest_submission : {self.latest_submission}',
                           ])
     # enddef

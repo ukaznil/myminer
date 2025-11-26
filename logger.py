@@ -25,7 +25,7 @@ class LogType(Enum):
     Fetch_New_Challenge_Error = ('21_fetch_new_challenge_error')
 
     # mining loop
-    Active_Addresses = ('30_active_addresses')
+    Active_Workers = ('30_active_workers')
     Start_New_Challenge = ('31_start_new_challenge')
     Batch_Size_Search = ('32_batch_size_search')
     Solution_Found = ('33_solution_found')

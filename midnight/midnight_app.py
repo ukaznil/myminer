@@ -24,11 +24,11 @@ class MidnightApp(BaseApp):
 
         # workers
         self.list__address = self.tracker.get_wallets()
-        self.nickname_of_address = {address: f'ADDR-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
+        self.worker_nicknames = {address: f'Worker-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
 
         # solver
-        self.solver = AshMaizeSolver(addr2nickname=self.nickname_of_address, logger=self.logger)
-        self.address_active_events = dict()  # type: dict[str, threading.Event]
+        self.solver = AshMaizeSolver(worker_nicknames=self.worker_nicknames, logger=self.logger)
+        self.worker_active_events = dict()  # type: dict[str, threading.Event]
     # enddef
 
     # -------------------------
@@ -81,7 +81,7 @@ class MidnightApp(BaseApp):
         sum_receipts = 0
         sum_allocation = 0
         for address in self.list__address:
-            nickname = f'[{self.nickname_of_address[address]}]'
+            nickname = f'[{self.worker_nicknames[address]}]'
 
             resp = self.get_statistics(address=address)
             time.sleep(0.1)
@@ -96,7 +96,7 @@ class MidnightApp(BaseApp):
                 sum_allocation += allocation
             # endif
 
-            is_mine = self.nickname_of_address[donation_address] if donation_address in self.list__address else False
+            is_mine = self.worker_nicknames[donation_address] if donation_address in self.list__address else False
 
             msg.append(f'{nickname}')
             msg.append(f'- address     : {address}')
@@ -129,7 +129,7 @@ class MidnightApp(BaseApp):
             raise ValueError(f'Given address={address} is not included in registered wallets.')
         # endif
 
-        nickname = f'[{self.nickname_of_address[address]}]'
+        nickname = f'[{self.worker_nicknames[address]}]'
         message_to_sign = f'Assign accumulated Scavenger rights to: {to}'
         print_with_time('\n'.join([
             f'{nickname} {address}',
@@ -191,7 +191,7 @@ class MidnightApp(BaseApp):
                 else:
                     run_event.set()  # run
                 # endif
-                self.address_active_events[address] = run_event
+                self.worker_active_events[address] = run_event
 
                 threads.append(threading.Thread(
                     target=self.mine_loop,
@@ -203,7 +203,7 @@ class MidnightApp(BaseApp):
             # -------------------------
             # start mining !!
             # -------------------------
-            self.set_active_addresses(num_threads=num_threads)
+            self.set_active_workers(num_threads=num_threads)
             self.solver.start()
             for thread in threads:
                 thread.start()
@@ -401,11 +401,11 @@ class MidnightApp(BaseApp):
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        nickname = f'[{self.nickname_of_address[address]}]'
+        nickname = f'[{self.worker_nicknames[address]}]'
 
         self.logger.log('\n'.join([
             f'=== {nickname} Start this Challenge ===',
-            f'address: {address}',
+            f'address       : {address}',
             f'{challenge}',
             ]), log_type=LogType.Start_New_Challenge, suffix=nickname)
 
@@ -420,7 +420,7 @@ class MidnightApp(BaseApp):
             if not challenge.is_valid():
                 self.logger.log('\n'.join([
                     f'=== {nickname} Challenge Expired ===',
-                    f'address   : {address}',
+                    f'address           : {address}',
                     f'challenge : {challenge.challenge_id}',
                     ]), log_type=LogType.Challenge_Expired, suffix=nickname)
             # endif
@@ -497,7 +497,7 @@ class MidnightApp(BaseApp):
 
     @measure_time
     def pause_solver(self, address: str):
-        ev = self.address_active_events.get(address)
+        ev = self.worker_active_events.get(address)
         if ev is not None:
             ev.clear()
         # endif
@@ -505,26 +505,26 @@ class MidnightApp(BaseApp):
 
     @measure_time
     def resume_solver(self, address: str):
-        ev = self.address_active_events.get(address)
+        ev = self.worker_active_events.get(address)
         if ev is not None:
             ev.set()
         # endif
     # enddef
 
     @measure_time
-    def set_active_addresses(self, num_threads: Optional[int]):
+    def set_active_workers(self, num_threads: Optional[int]):
         if num_threads is None:
             return
         # endif
 
-        msg = [f'=== Active Addresses (<= {num_threads}) ===']
+        msg = [f'=== Active Workers (<= {num_threads}) ===']
 
         counts = {addr: len(self.tracker.get_challenges(address=addr, list__status=[SolutionStatus.Found, SolutionStatus.Invalid])) for addr in self.list__address}
         list_active_address = [addr for addr, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:num_threads]]
 
         changed = False
         for address in self.list__address:
-            ev = self.address_active_events[address]
+            ev = self.worker_active_events[address]
             is_active = address in list_active_address
 
             if is_active and not ev.is_set():
@@ -535,12 +535,12 @@ class MidnightApp(BaseApp):
                 changed = True
             # endif
 
-            nickname = f'[{self.nickname_of_address[address]}]'
+            nickname = f'[{self.worker_nicknames[address]}]'
             msg.append(f'{nickname}: {"*active*" if is_active else ""}')
         # endfor
 
         if changed:
-            self.logger.log('\n'.join(msg), log_type=LogType.Active_Addresses)
+            self.logger.log('\n'.join(msg), log_type=LogType.Active_Workers)
         # endif
     # enddef
 
@@ -549,9 +549,9 @@ class MidnightApp(BaseApp):
         assert_type(address, str)
         assert_type(num_threads, int, allow_none=True)
 
-        address_active_event = self.address_active_events[address]
+        active_worker_event = self.worker_active_events[address]
         while self.solver.is_running():
-            address_active_event.wait()  # run when 'set'; stop when 'clear'
+            active_worker_event.wait()  # run when 'set'; stop when 'clear'
 
             challenge = self.tracker.get_oldest_unsolved_challenge(address)
 
@@ -559,7 +559,7 @@ class MidnightApp(BaseApp):
                 time.sleep(10)
             else:
                 self.solve_challenge(address=address, challenge=challenge)
-                self.set_active_addresses(num_threads=num_threads)
+                self.set_active_workers(num_threads=num_threads)
             # endif
 
             time.sleep(0.5)
@@ -599,7 +599,7 @@ class MidnightApp(BaseApp):
         msg = ['=== [W]orklist ===']
 
         for idx_address, address in enumerate(self.list__address):
-            msg.append(f'[{self.nickname_of_address[address]}] {address}')
+            msg.append(f'[{self.worker_nicknames[address]}] {address}')
 
             list__challenge = self.tracker.get_challenges(address=address, list__status=[ss for ss in SolutionStatus if ss != SolutionStatus.Validated])
             worker_profile = self.solver.wp_by_address[address]
@@ -640,7 +640,7 @@ class MidnightApp(BaseApp):
 
         list__hashrate = []
         for address in self.list__address:
-            nickname = f'[{self.nickname_of_address[address]}]'
+            nickname = f'[{self.worker_nicknames[address]}]'
 
             work_profile = self.solver.wp_by_address[address]
             job_stats = work_profile.job_stats
@@ -690,9 +690,9 @@ class MidnightApp(BaseApp):
                 elif self.project == Project.Defensio:
                     allocation = resp['local']['dfo_allocation'] / 1_000_000
                 # endif
-                msg.append(f'[{self.nickname_of_address[address]}] receipts={receipts:,}, allocation={allocation:,}')
+                msg.append(f'[{self.worker_nicknames[address]}] receipts={receipts:,}, allocation={allocation:,}')
             except:
-                msg.append(f'[{self.nickname_of_address[address]}] Error')
+                msg.append(f'[{self.worker_nicknames[address]}] Error')
             # endtry
         # endfor
 

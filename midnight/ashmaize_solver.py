@@ -38,8 +38,8 @@ class WorkerProfile:
 class AshMaizeSolver:
     RANDOM_BUFFER_SIZE = 65_536
 
-    def __init__(self, addr2nickname: dict[str, str], logger: Logger):
-        self.addr2nickname = addr2nickname
+    def __init__(self, worker_nicknames: dict[str, str], logger: Logger):
+        self.worker_nicknames = worker_nicknames
         self.logger = logger
 
         # -------------------------
@@ -51,8 +51,8 @@ class AshMaizeSolver:
         # -------------------------
         # generate nonces
         # -------------------------
-        self.rb_by_address = {address: [bytearray(self.RANDOM_BUFFER_SIZE)] for address in addr2nickname.keys()}  # type: dict[str, list[bytearray]]
-        self.rbpos_by_address = {address: [len(self.rb_by_address[address][0])] for address in addr2nickname.keys()}  # type: dict[str, list[int]]
+        self.rb_by_address = {address: [bytearray(self.RANDOM_BUFFER_SIZE)] for address in worker_nicknames.keys()}  # type: dict[str, list[bytearray]]
+        self.rbpos_by_address = {address: [len(self.rb_by_address[address][0])] for address in worker_nicknames.keys()}  # type: dict[str, list[int]]
         self.preimage_base_cache = dict()
     # enddef
 
@@ -81,7 +81,7 @@ class AshMaizeSolver:
         assert_type(address, str)
         assert_type(challenge, Challenge)
 
-        nickname = f'[{self.addr2nickname[address]}]'
+        nickname = f'[{self.worker_nicknames[address]}]'
         worker_profile = self.wp_by_address[address]
         now = time.time()
         worker_profile.job_stats = JobStats(challenge=challenge, tries=0, hashrate=None, started_at=now, updated_at=now)
