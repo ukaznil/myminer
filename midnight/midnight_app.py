@@ -78,8 +78,8 @@ class MidnightApp(BaseApp):
     def handle_list_wallets(self):
         msg = ['=== Wallet List ===']
 
-        sum_receipts = 0
-        sum_allocation = 0
+        sum_receipts_local = 0
+        sum_allocation_local = 0
         for address in self.list__address:
             nickname = f'[{self.worker_nicknames[address]}]'
 
@@ -87,29 +87,36 @@ class MidnightApp(BaseApp):
             time.sleep(0.1)
 
             donation_address = resp['local_with_donate']['donation_address']
-            receipts = resp['local']['crypto_receipts']
-            sum_receipts += receipts
+            receipts_with_donate = resp['local_with_donate']['crypto_receipts']
+            receipts_local = resp['local']['crypto_receipts']
+            sum_receipts_local += receipts_local
             if self.project == Project.Midnight:
-                allocation = None
+                allocation_local = None
+                allocation_with_donate = None
             elif self.project == Project.Defensio:
-                allocation = resp['local']['dfo_allocation'] / 1_000_000
-                sum_allocation += allocation
+                allocation_local = resp['local']['dfo_allocation'] / 1_000_000
+                allocation_with_donate = resp['local_with_donate']['dfo_allocation'] / 1_000_000
+                sum_allocation_local += allocation_local
             # endif
 
             is_mine = self.worker_nicknames[donation_address] if donation_address in self.list__address else False
 
             msg.append(f'{nickname}')
-            msg.append(f'- address     : {address}')
-            msg.append(f'- donated_to  : {donation_address}')
-            msg.append(f'  - is owned? : {is_mine}' + (' (self)' if address == donation_address else ''))
-            msg.append(f'- receipts    : {receipts}')
-            msg.append(f'- allocation  : {safefstr(allocation, ",")}')
+            msg.append(f'address       : {address}')
+            msg.append(f'donated_to    : {donation_address}')
+            msg.append(f'- is owned?   : {is_mine}' + (' (self)' if address == donation_address else ''))
+            msg.append(f'self')
+            msg.append(f'- receipts    : {receipts_local}')
+            msg.append(f'- allocation  : {safefstr(allocation_local, ",")}')
+            msg.append(f'with donation')
+            msg.append(f'- receipts    : {receipts_with_donate}')
+            msg.append(f'- allocation  : {safefstr(allocation_with_donate, ",")}')
         # endfor
 
         # sum
         msg.append('-' * 21)
-        msg.append(f'- receipts    : {sum_receipts:,}')
-        msg.append(f'- allocation  : {sum_allocation:,}')
+        msg.append(f'- receipts    : {sum_receipts_local:,}')
+        msg.append(f'- allocation  : {sum_allocation_local:,}')
 
         self.logger.log('\n'.join(msg), log_type=LogType.Wallet_List)
     # enddef
@@ -119,14 +126,24 @@ class MidnightApp(BaseApp):
         assert_type(address, str)
         assert_type(to, str)
 
+        nickname = f'[{self.worker_nicknames[address]}]'
+
+        if address not in self.list__address:
+            raise ValueError(f'Given address={address} is not included in registered wallets.')
+        # endif
+
         if address == to:
-            print(f'Cannot be donated to itself. Skipped.')
+            print(f'{nickname} cannot be donated to itself. Skipped.')
 
             return
         # endif
 
-        if address not in self.list__address:
-            raise ValueError(f'Given address={address} is not included in registered wallets.')
+        resp_statistics = self.get_statistics(address=address)
+        time.sleep(0.1)
+        if to == resp_statistics['local_with_donate']['donation_address']:
+            print(f'{nickname} is already donated to {to}. Skipped.')
+
+            return
         # endif
 
         nickname = f'[{self.worker_nicknames[address]}]'
@@ -139,18 +156,18 @@ class MidnightApp(BaseApp):
         signature = input(f'Signature: ')
 
         try:
-            resp = self.donate_to(destionation_address=to, original_address=address, signature=signature)
-            status = resp.get('status')
+            resp_donate = self.donate_to(destionation_address=to, original_address=address, signature=signature)
+            status = resp_donate.get('status')
             msg = [
                 '=== Donation Response ===',
-                f'{resp}'
+                f'{resp_donate}'
                 ]
             if status == 'success':
                 msg.append(f'-> Donation Validated !!!')
             else:
-                status_code = resp.get('statusCode')
-                error = resp.get('error')
-                message = resp.get('message')
+                status_code = resp_donate.get('statusCode')
+                error = resp_donate.get('error')
+                message = resp_donate.get('message')
 
                 msg.append(f'-> Donation Invalid. code={status_code}, error={error}, message={message}')
             # endif
