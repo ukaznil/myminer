@@ -1,22 +1,24 @@
+import sys
 import threading
 
+from midnight.ashmaize import PyAshMaize, PyRom
 from utils import assert_type
 
 try:
     from midnight import ashmaize_loader
-    ashmaize_py = ashmaize_loader.init()
+    ashmaize_py = ashmaize_loader.init()  # type: PyAshMaize
 except ImportError:
     sys.exit(1)
 
 
 class AshMaizeROMManager:
     _lock = threading.Lock()
-    _cache = {}
+    _cache = {}  # type: dict[str, PyRom]
 
     ROM_SIZE = 1_073_741_824
 
     @classmethod
-    def get_rom(cls, key: str):
+    def get_rom(cls, key: str) -> PyRom:
         assert_type(key, str)
 
         with cls._lock:

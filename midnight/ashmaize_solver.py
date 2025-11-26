@@ -5,6 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+from midnight.pyrom import PyRom
+
 from logger import LogType, Logger, measure_time
 from midnight.ashmaize_rom_manager import AshMaizeROMManager
 from midnight.challenge import Challenge
@@ -171,8 +173,8 @@ class AshMaizeSolver:
     # enddef
 
     @measure_time
-    def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, get_fast_nonce: Callable[None, int],
-                            rom, difficulty_mask: int, batch_size: int, is_search: bool) -> Optional[Solution]:
+    def try_once_with_batch(self, worker_profile: WorkerProfile, preimage_base: str, get_fast_nonce: Callable[[], int],
+                            rom: PyRom, difficulty_mask: int, batch_size: int, is_search: bool) -> Optional[Solution]:
         assert_type(difficulty_mask, int)
         assert_type(batch_size, int)
         assert_type(is_search, bool)
