@@ -24,7 +24,7 @@ class MidnightApp(BaseApp):
 
         # workers
         self.list__address = self.tracker.get_wallets()
-        self.worker_nicknames = {address: f'Worker-#{idx_addr}' for idx_addr, address in enumerate(self.list__address)}
+        self.worker_nicknames = {address: f'Worker-#{idx_addr:02}' for idx_addr, address in enumerate(self.list__address)}
 
         # solver
         self.solver = AshMaizeSolver(worker_nicknames=self.worker_nicknames, logger=self.logger)
@@ -123,27 +123,7 @@ class MidnightApp(BaseApp):
 
     @measure_time
     def handle_show_results(self):
-        msg = ['=== Mining Results ===']
-
-        list__challenge = self.tracker.get_all_challenges()
-        sum_num_validted = 0
-        for challenge in list__challenge:
-            num_validated = 0
-            for address in self.list__address:
-                ss = self.tracker.get_solution_status(address=address, challenge=challenge)
-
-                if ss and ss == SolutionStatus.Validated:
-                    num_validated += 1
-                # endif
-            # endfor
-            sum_num_validted += num_validated
-
-            msg.append(f'{challenge.challenge_id} ({challenge.difficulty}): {"*" * num_validated}')
-        # endfor
-        msg.append(f'-' * 21)
-        msg.append(f'sum: {sum_num_validted}')
-
-        print_with_time('\n'.join(msg))
+        self.show_results()
     # enddef
 
     @measure_time
@@ -259,6 +239,7 @@ class MidnightApp(BaseApp):
             last_retrieve_new_challenge = 0
             last_show_worklist = 0
             last_show_hashrate = now
+            last_show_results = now
             last_maintain_cache = now
             while self.solver.is_running():
                 now = time.time()
@@ -276,6 +257,11 @@ class MidnightApp(BaseApp):
                 if now - last_show_hashrate > 60 * 10:
                     async_run_func(self.show_hashrate)
                     last_show_hashrate = now
+                # endif
+
+                if now - last_show_results > 60 * 15:
+                    async_run_func(self.show_results)
+                    last_show_results = now
                 # endif
 
                 if now - last_maintain_cache > 60 * 30:
@@ -715,6 +701,30 @@ class MidnightApp(BaseApp):
         # endif
 
         self.logger.log('\n'.join(msg), log_type=LogType.Hashrate)
+    # enddef
+
+    def show_results(self):
+        msg = ['=== Mining Results ===']
+
+        list__challenge = self.tracker.get_all_challenges()
+        sum_num_validted = 0
+        for challenge in list__challenge:
+            num_validated = 0
+            for address in self.list__address:
+                ss = self.tracker.get_solution_status(address=address, challenge=challenge)
+
+                if ss and ss == SolutionStatus.Validated:
+                    num_validated += 1
+                # endif
+            # endfor
+            sum_num_validted += num_validated
+
+            msg.append(f'{challenge.challenge_id} ({challenge.difficulty}): {"*" * num_validated}')
+        # endfor
+        msg.append(f'-' * 21)
+        msg.append(f'sum: {sum_num_validted}')
+
+        self.logger.log('\n'.join(msg), log_type=LogType.Results)
     # enddef
 
     @measure_time
