@@ -111,10 +111,10 @@ class MidnightApp(BaseApp):
             msg.append(f'with donation')
             msg.append(f'- receipts    : {receipts_with_donate}')
             msg.append(f'- allocation  : {safefstr(allocation_with_donate, ",")}')
+            msg.append(f'-' * 21)
         # endfor
 
         # sum
-        msg.append('-' * 21)
         msg.append(f'- receipts    : {sum_receipts_local:,}')
         msg.append(f'- allocation  : {sum_allocation_local:,}')
 
