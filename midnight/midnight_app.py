@@ -719,7 +719,8 @@ class MidnightApp(BaseApp):
                     num_validated += 1
                 # endif
 
-                if challenge == self.solver.wp_by_address[address].job_stats.challenge:
+                job_stats = self.solver.wp_by_address[address].job_stats
+                if job_stats and challenge == job_stats.challenge:
                     num_solving += 1
                 # endif
             # endfor
