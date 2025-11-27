@@ -712,16 +712,20 @@ class MidnightApp(BaseApp):
         sum_num_validted = 0
         for challenge in list__challenge:
             num_validated = 0
+            num_solving = 0
             for address in self.list__address:
                 ss = self.tracker.get_solution_status(address=address, challenge=challenge)
-
                 if ss and ss == SolutionStatus.Validated:
                     num_validated += 1
+                # endif
+
+                if challenge == self.solver.wp_by_address[address].job_stats.challenge:
+                    num_solving += 1
                 # endif
             # endfor
             sum_num_validted += num_validated
 
-            msg.append(f'{challenge.challenge_id} ({challenge.difficulty}): {"*" * num_validated}')
+            msg.append(f'{challenge.challenge_id} ({challenge.difficulty}): {"*" * num_validated}{"." * num_solving}')
         # endfor
         msg.append(f'-' * 21)
         msg.append(f'sum: {sum_num_validted}')
